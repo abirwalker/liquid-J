@@ -14,6 +14,16 @@
 
     <build>
         <sourceDirectory>src</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>liquidJ</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 
     <dependencies>

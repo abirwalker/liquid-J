@@ -1,0 +1,43 @@
+/* Light theme: white editor, light grey chrome. Only redefines liquidj.css colors. */
+
+.root {
+    -lj-editor: #ffffff;
+    -lj-chrome: #f4f4f6;
+    -lj-titlebar: #eeeef1;
+    -lj-border: #dcdce2;
+    -lj-hairline: rgba(16, 24, 40, 0.08);
+    -lj-text: #1d1d1f;
+    -lj-text-2: #3f4450;
+    -lj-text-3: #5e636e;
+    -lj-gutter: #6b707a;
+    -lj-hover: rgba(16, 24, 40, 0.05);
+    -lj-pressed: rgba(16, 24, 40, 0.09);
+    -lj-accent: #2563eb;
+    -lj-accent-solid: #2563eb;
+    -lj-accent-solid-hover: #1d4ed8;
+    -lj-row-selected: rgba(37, 99, 235, 0.12);
+    -lj-selection: rgba(37, 99, 235, 0.2);
+    -lj-active-line: rgba(37, 99, 235, 0.05);
+    -lj-ok: #166534;
+    -lj-error: #b91c1c;
+    -lj-warning: #a16207;
+    -lj-java: #92400e;
+    -lj-java-bg: rgba(194, 86, 12, 0.12);
+    -lj-folder: #2563eb;
+    -lj-thumb: rgba(16, 24, 40, 0.2);
+    -lj-glass-fill: rgba(255, 255, 255, 0.75);
+    -lj-glass-rim: rgba(16, 24, 40, 0.1);
+    -lj-glass-shine: rgba(255, 255, 255, 0.95);
+    -lj-overlay: #ffffff;
+    -lj-overlay-rim: rgba(16, 24, 40, 0.12);
+    -lj-overlay-shadow: rgba(16, 24, 40, 0.18);
+
+    /* Xcode Default (Light) syntax colors. */
+    -lj-syntax-keyword: #9b2393;
+    -lj-syntax-type: #0b4f79;
+    -lj-syntax-method: #326d74;
+    -lj-syntax-string: #c41a16;
+    -lj-syntax-number: #1c00cf;
+    -lj-syntax-comment: #5d6c79;
+    -lj-syntax-annotation: #815f03;
+}

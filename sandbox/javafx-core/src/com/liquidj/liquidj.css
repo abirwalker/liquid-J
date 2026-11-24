@@ -1,0 +1,524 @@
+/*
+ * Liquid-J theme. Dark navy is the default; liquidj-light.css only redefines the colors below.
+ * Colors and the Xcode-style layout come from sandbox/liquid-j-xcode.html.
+ *
+ * Glass (translucent fill, 1px rim, top shine, soft shadow) is used only on floating controls:
+ * the toolbar buttons and the project navigator. Code, console and dialogs use solid fills,
+ * because JavaFX has no backdrop blur and text behind a translucent panel shows through.
+ */
+
+.root {
+    -lj-window: #0b1019;
+    -lj-editor: #0e141f;
+    -lj-console: #0c121c;
+    -lj-hairline: rgba(255, 255, 255, 0.075);
+    -lj-text: #e3e8f0;
+    -lj-text-2: #a7b3c5;
+    -lj-text-3: #8b98ab;
+    -lj-hover: rgba(255, 255, 255, 0.06);
+    -lj-pressed: rgba(255, 255, 255, 0.11);
+    -lj-accent: #60a5fa;
+    -lj-accent-solid: #2563eb;
+    -lj-accent-solid-hover: #1d4ed8;
+    -lj-on-accent: #ffffff;
+    -lj-row-selected: rgba(96, 165, 250, 0.2);
+    -lj-selection: rgba(96, 165, 250, 0.32);
+    -lj-ok: #4ade80;
+    -lj-error: #f87171;
+    -lj-warning: #fbbf24;
+    -lj-thumb: rgba(255, 255, 255, 0.16);
+    -lj-glass-fill: rgba(255, 255, 255, 0.055);
+    -lj-glass-rim: rgba(255, 255, 255, 0.1);
+    -lj-glass-shine: rgba(255, 255, 255, 0.08);
+    -lj-glass-shadow: rgba(0, 0, 0, 0.35);
+    -lj-glass-hover: rgba(255, 255, 255, 0.1);
+    -lj-glass-pressed: rgba(255, 255, 255, 0.15);
+    -lj-overlay: #161e2c;
+    -lj-overlay-rim: rgba(255, 255, 255, 0.12);
+    -lj-overlay-shadow: rgba(0, 0, 0, 0.5);
+
+    /* Modena derives the default controls (check boxes, combo boxes, dialogs) from these. */
+    -fx-base: -lj-overlay;
+    -fx-background: -lj-window;
+    -fx-control-inner-background: -lj-editor;
+    -fx-accent: -lj-accent-solid;
+    -fx-focus-color: -lj-accent;
+    -fx-faint-focus-color: transparent;
+    -fx-text-base-color: -lj-text;
+    -fx-text-background-color: -lj-text;
+    -fx-text-inner-color: -lj-text;
+    -fx-selection-bar: -lj-row-selected;
+    -fx-selection-bar-non-focused: -lj-row-selected;
+    -fx-selection-bar-text: -lj-text;
+    -fx-highlight-fill: -lj-selection;
+    -fx-highlight-text-fill: -lj-text;
+
+    -fx-font-size: 13px;
+    -fx-background-color: -lj-window;
+}
+
+/* ---------- Menu bar and menus ---------- */
+
+.menu-bar {
+    -fx-background-color: -lj-window;
+    -fx-padding: 3 8 0 8;
+}
+
+.menu-bar > .container > .menu-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-padding: 3 8;
+}
+
+.menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: -lj-text-2;
+}
+
+.menu-bar > .container > .menu-button:hover,
+.menu-bar > .container > .menu-button:showing {
+    -fx-background-color: -lj-hover;
+}
+
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:showing > .label {
+    -fx-text-fill: -lj-text;
+}
+
+.context-menu {
+    -fx-background-color: -lj-overlay-rim, -lj-overlay;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 10, 9;
+    -fx-padding: 5;
+    -fx-effect: dropshadow(gaussian, -lj-overlay-shadow, 28, 0, 0, 10);
+}
+
+.menu-item {
+    -fx-background-radius: 6;
+    -fx-padding: 5 12 5 10;
+}
+
+.menu-item > .label {
+    -fx-text-fill: -lj-text;
+}
+
+.menu-item > .accelerator-text {
+    -fx-text-fill: -lj-text-3;
+}
+
+.menu-item:focused {
+    -fx-background-color: -lj-accent-solid;
+}
+
+.menu-item:focused > .label,
+.menu-item:focused > .accelerator-text {
+    -fx-text-fill: -lj-on-accent;
+}
+
+.check-menu-item:checked > .left-container > .check,
+.radio-menu-item:checked > .left-container > .radio {
+    -fx-background-color: -lj-text;
+}
+
+.check-menu-item:focused:checked > .left-container > .check {
+    -fx-background-color: -lj-on-accent;
+}
+
+.context-menu > .separator > .line {
+    -fx-border-color: -lj-hairline transparent transparent transparent;
+}
+
+/* ---------- Toolbar: glass buttons ---------- */
+
+.tool-bar {
+    -fx-background-color: -lj-window;
+    -fx-padding: 6 10 10 10;
+    -fx-spacing: 8;
+}
+
+.tool-bar .separator {
+    -fx-padding: 0 4;
+}
+
+.tool-bar .separator > .line {
+    -fx-border-color: transparent;
+}
+
+/*
+ * JavaFX paints background layers on top of each other, so rim and shine are borders here:
+ * stacked translucent fills would add up to a flat grey.
+ */
+.button.glass {
+    -fx-background-color: -lj-glass-fill;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8;
+    -fx-border-color: -lj-glass-rim, -lj-glass-shine transparent transparent transparent;
+    -fx-border-width: 1, 1;
+    -fx-border-insets: 0, 1;
+    -fx-border-radius: 8, 7;
+    -fx-text-fill: -lj-text;
+    -fx-padding: 5 14;
+    -fx-effect: dropshadow(gaussian, -lj-glass-shadow, 10, 0, 0, 2);
+}
+
+.button.glass:hover {
+    -fx-background-color: -lj-glass-hover;
+}
+
+.button.glass:pressed {
+    -fx-background-color: -lj-glass-pressed;
+}
+
+/* Run is the one primary action in the window, so it carries the accent. */
+.button.glass.primary {
+    -fx-background-color: -lj-accent-solid;
+    -fx-border-color: -lj-glass-rim;
+    -fx-border-width: 1;
+    -fx-border-insets: 0;
+    -fx-border-radius: 8;
+    -fx-text-fill: -lj-on-accent;
+}
+
+.button.glass.primary:hover {
+    -fx-background-color: -lj-accent-solid-hover;
+}
+
+.button.glass:focused {
+    -fx-border-color: -lj-accent;
+    -fx-border-width: 1.5;
+    -fx-border-insets: 0;
+    -fx-border-radius: 8;
+}
+
+.button:disabled {
+    -fx-opacity: 0.4;
+}
+
+/* ---------- Split panes ---------- */
+
+.split-pane {
+    -fx-background-color: -lj-window;
+    -fx-padding: 0;
+}
+
+/* 5px wide so it is easy to grab, drawn as a 1px line. */
+.split-pane > .split-pane-divider {
+    -fx-background-color: transparent, -lj-hairline;
+    -fx-background-insets: 0, 0 2 0 2;
+    -fx-padding: 0 2.5 0 2.5;
+}
+
+.split-pane:vertical > .split-pane-divider {
+    -fx-background-insets: 0, 2 0 2 0;
+    -fx-padding: 2.5 0 2.5 0;
+}
+
+/* ---------- Project navigator (floating, glass) ---------- */
+
+.navigator {
+    -fx-background-color: -lj-window;
+    -fx-padding: 0 8 10 10;
+}
+
+.navigator > .tree-view {
+    -fx-background-color: -lj-glass-fill;
+    -fx-background-insets: 0;
+    -fx-background-radius: 12;
+    -fx-border-color: -lj-glass-rim, -lj-glass-shine transparent transparent transparent;
+    -fx-border-width: 1, 1;
+    -fx-border-insets: 0, 1;
+    -fx-border-radius: 12, 11;
+    -fx-padding: 6;
+    -fx-effect: dropshadow(gaussian, -lj-glass-shadow, 14, 0, 0, 3);
+}
+
+.tree-view > .virtual-flow > .clipped-container > .sheet > .tree-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -lj-text-2;
+    -fx-padding: 4 8 4 4;
+}
+
+.tree-view > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:hover {
+    -fx-background-color: -lj-hover;
+}
+
+.tree-view > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected {
+    -fx-background-color: -lj-row-selected;
+    -fx-text-fill: -lj-text;
+}
+
+.tree-cell > .tree-disclosure-node > .arrow {
+    -fx-background-color: -lj-text-3;
+}
+
+.empty-state {
+    -fx-text-fill: -lj-text-3;
+    -fx-text-alignment: center;
+}
+
+/* ---------- Tabs ---------- */
+
+.tab-pane > .tab-header-area {
+    -fx-padding: 0 8 0 8;
+}
+
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -lj-hairline, -lj-window;
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 7 7 0 0;
+    -fx-padding: 4 10 4 12;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: -lj-hover;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: -lj-text-3;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: -lj-text;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button {
+    -fx-background-color: -lj-text-3;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+.tab-pane > .tab-content-area {
+    -fx-padding: 0;
+}
+
+.editor-area,
+.editor-area > .tab-pane > .tab-content-area,
+.editor-area > .tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -lj-editor;
+}
+
+.debug-area > .tab-content-area,
+.debug-area > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -lj-console;
+}
+
+/* ---------- Text areas: editor and console ---------- */
+
+.text-area,
+.text-area:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-text-fill: -lj-text;
+}
+
+.text-area > .scroll-pane,
+.text-area > .scroll-pane > .viewport,
+.text-area > .scroll-pane > .viewport > * > .content {
+    -fx-background-color: transparent;
+}
+
+.editor-area .text-area > .scroll-pane > .viewport > * > .content {
+    -fx-padding: 10 14 10 14;
+}
+
+.console,
+.console > .text-area {
+    -fx-background-color: -lj-console;
+}
+
+.console > .text-area > .scroll-pane > .viewport > * > .content {
+    -fx-padding: 8 12 8 12;
+}
+
+.console-actions {
+    -fx-background-color: -lj-console;
+}
+
+.console-actions > .button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -lj-text-2;
+    -fx-padding: 3 10;
+}
+
+.console-actions > .button:hover {
+    -fx-background-color: -lj-hover;
+    -fx-text-fill: -lj-text;
+}
+
+.console-actions > .button:pressed {
+    -fx-background-color: -lj-pressed;
+}
+
+#console-input {
+    -fx-background-color: -lj-hairline, -lj-console;
+    -fx-background-insets: 0, 1 0 0 0;
+    -fx-background-radius: 0;
+    -fx-text-fill: -lj-text;
+    -fx-prompt-text-fill: -lj-text-3;
+    -fx-padding: 7 12;
+}
+
+#console-input:focused {
+    -fx-background-color: -lj-accent, -lj-console;
+}
+
+#console-input:disabled {
+    -fx-opacity: 0.6;
+}
+
+/* ---------- Issues list ---------- */
+
+.list-view {
+    -fx-background-color: -lj-console;
+    -fx-padding: 4;
+}
+
+.list-view > .placeholder > .label {
+    -fx-text-fill: -lj-text-3;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -lj-text;
+    -fx-padding: 5 10;
+    -fx-graphic-text-gap: 10;
+}
+
+.list-cell:filled:hover {
+    -fx-background-color: -lj-hover;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: -lj-row-selected;
+}
+
+.issue-kind {
+    -fx-font-weight: bold;
+    -fx-min-width: 56;
+}
+
+.issue-kind.error {
+    -fx-text-fill: -lj-error;
+}
+
+.issue-kind.warning {
+    -fx-text-fill: -lj-warning;
+}
+
+/* ---------- Status bar ---------- */
+
+.status-bar {
+    -fx-background-color: -lj-hairline, -lj-window;
+    -fx-background-insets: 0, 1 0 0 0;
+    -fx-padding: 5 12;
+}
+
+.status-bar > .label {
+    -fx-text-fill: -lj-text-3;
+    -fx-font-size: 12px;
+}
+
+.status-bar > .label.ok {
+    -fx-text-fill: -lj-ok;
+}
+
+.status-bar > .label.error {
+    -fx-text-fill: -lj-error;
+}
+
+/* ---------- Scroll bars: thin, no arrow buttons ---------- */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: -lj-thumb;
+    -fx-background-insets: 3;
+    -fx-background-radius: 6;
+}
+
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-padding: 0;
+}
+
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-shape: "";
+    -fx-padding: 0;
+}
+
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
+}
+
+/* ---------- Dialogs (solid, never glass) ---------- */
+
+.dialog-pane {
+    -fx-background-color: -lj-overlay;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: -lj-hairline, -lj-overlay;
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.dialog-pane > .header-panel > .label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -lj-text;
+}
+
+.dialog-pane > .content.label {
+    -fx-text-fill: -lj-text-2;
+}
+
+.dialog-pane > .button-bar > .container > .button {
+    -fx-background-color: -lj-overlay-rim, -lj-hover;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 7, 6;
+    -fx-text-fill: -lj-text;
+    -fx-padding: 5 14;
+}
+
+.dialog-pane > .button-bar > .container > .button:default {
+    -fx-background-color: -lj-accent-solid;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7;
+    -fx-text-fill: -lj-on-accent;
+}
+
+.dialog-pane .text-field,
+.dialog-pane .combo-box {
+    -fx-background-color: -lj-overlay-rim, -lj-editor;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+    -fx-text-fill: -lj-text;
+}
+
+.dialog-pane .text-field:focused {
+    -fx-background-color: -lj-accent, -lj-editor;
+}
+
+.tooltip {
+    -fx-background-color: -lj-overlay-rim, -lj-overlay;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+    -fx-text-fill: -lj-text;
+    -fx-font-size: 12px;
+}

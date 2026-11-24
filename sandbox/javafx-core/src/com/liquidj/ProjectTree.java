@@ -13,17 +13,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 /**
@@ -39,27 +43,69 @@ final class ProjectTree {
     private final StackPane root;
     private Path folder;
     private String filter = "";
+    private FileActions actions;
+    private ContextMenu menu;
 
     ProjectTree(Consumer<Path> openFile) {
         view.setId("project-tree");
-        view.setCellFactory(tree -> new TreeCell<>() {
-            @Override
-            protected void updateItem(Path item, boolean empty) {
-                super.updateItem(item, empty);
-                boolean blank = empty || item == null;
-                setText(blank ? null : displayName(item));
-                setGraphic(blank ? null : Icons.forFile(item));
-            }
+        view.setCellFactory(tree -> {
+            TreeCell<Path> cell = new TreeCell<>() {
+                @Override
+                protected void updateItem(Path item, boolean empty) {
+                    super.updateItem(item, empty);
+                    boolean blank = empty || item == null;
+                    setText(blank ? null : displayName(item));
+                    setGraphic(blank ? null : Icons.forFile(item));
+                }
+            };
+            // Right-click acts on the row under the pointer; on empty space, on the project folder.
+            cell.addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
+                if (event.getButton() != MouseButton.SECONDARY) {
+                    return;
+                }
+                if (cell.isEmpty()) {
+                    view.getSelectionModel().clearSelection();
+                } else {
+                    view.getSelectionModel().select(cell.getTreeItem());
+                }
+            });
+            return cell;
         });
         view.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 openSelected(openFile);
             }
         });
         view.setOnKeyPressed(event -> {
+            Path selected = selectedPath();
             if (event.getCode() == KeyCode.ENTER) {
                 openSelected(openFile);
+            } else if (actions != null && selected != null && !selected.equals(folder)) {
+                if (event.getCode() == KeyCode.F2) {
+                    actions.rename(selected);
+                } else if (event.getCode() == KeyCode.DELETE) {
+                    actions.delete(selected);
+                }
             }
+        });
+        view.setOnContextMenuRequested(event -> {
+            if (actions == null || folder == null) {
+                return;
+            }
+            Path target = selectedPath() == null ? folder : selectedPath();
+            if (menu != null) {
+                menu.hide();
+            }
+            menu = actions.menuFor(target);
+            Node anchor = event.isKeyboardTrigger() ? selectedCell().orElse(view) : view;
+            if (event.isKeyboardTrigger()) {
+                // From the keyboard (Shift+F10, Menu key): open under the selected row.
+                var bounds = anchor.localToScreen(anchor.getBoundsInLocal());
+                menu.show(view, bounds.getMinX() + 24, bounds.getMaxY());
+            } else {
+                menu.show(view, event.getScreenX(), event.getScreenY());
+            }
+            event.consume();
         });
         view.setVisible(false);
         Label empty = new Label("No folder open");
@@ -72,6 +118,50 @@ final class ProjectTree {
 
     Node node() {
         return root;
+    }
+
+    /** Right-click menu, F2 and Delete go to these. */
+    void setFileActions(FileActions actions) {
+        this.actions = actions;
+    }
+
+    Optional<Path> folder() {
+        return Optional.ofNullable(folder);
+    }
+
+    /** Expands the folders above the path and selects it, if it is in the tree. */
+    void reveal(Path target) {
+        TreeItem<Path> item = view.getRoot();
+        if (item == null || !target.startsWith(item.getValue())) {
+            return;
+        }
+        while (!item.getValue().equals(target)) {
+            item.setExpanded(true);
+            TreeItem<Path> next = null;
+            for (TreeItem<Path> child : item.getChildren()) {
+                if (target.startsWith(child.getValue())) {
+                    next = child;
+                    break;
+                }
+            }
+            if (next == null) {
+                return;
+            }
+            item = next;
+        }
+        view.getSelectionModel().select(item);
+    }
+
+    private Path selectedPath() {
+        TreeItem<Path> selected = view.getSelectionModel().getSelectedItem();
+        return selected == null ? null : selected.getValue();
+    }
+
+    private Optional<Node> selectedCell() {
+        TreeItem<Path> selected = view.getSelectionModel().getSelectedItem();
+        return view.lookupAll(".tree-cell").stream()
+                .filter(node -> node instanceof TreeCell<?> cell && !cell.isEmpty() && cell.getTreeItem() == selected)
+                .findFirst();
     }
 
     void show(Path folder) {

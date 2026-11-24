@@ -53,10 +53,6 @@ final class Icons {
         return stroked("M1.5,3 H5.5 L7,4.5 H12.5 V11.5 H1.5 Z");
     }
 
-    static Node theme() {
-        return stroked("M7,1.5 A5.5,5.5 0 1,0 7,12.5 A5.5,5.5 0 1,0 7,1.5 Z M7,1.5 V12.5");
-    }
-
     static Node success() {
         SVGPath icon = stroked("M2,7.5 L5.5,11 L12,3");
         icon.getStyleClass().add("icon-ok");

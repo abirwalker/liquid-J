@@ -139,6 +139,25 @@ final class EditorTabs {
         });
     }
 
+    /** After a rename on disk: tabs for the file, or for files inside the folder, follow it. Edits are kept. */
+    void moved(Path from, Path to) {
+        for (FileTab tab : fileTabs()) {
+            if (tab.path.startsWith(from)) {
+                tab.relocate(to.resolve(from.relativize(tab.path)));
+            }
+        }
+        updateStatus();
+    }
+
+    boolean hasUnsavedUnder(Path target) {
+        return fileTabs().stream().anyMatch(tab -> tab.path.startsWith(target) && tab.isDirty());
+    }
+
+    /** After a delete: closes tabs for the file, or for files inside the folder, without asking. */
+    void closeUnder(Path target) {
+        pane.getTabs().removeIf(tab -> tab instanceof FileTab fileTab && fileTab.path.startsWith(target));
+    }
+
     /** Asks about every unsaved tab, then closes them all. Returns false if the user cancelled. */
     boolean closeAll() {
         for (FileTab tab : fileTabs()) {
@@ -282,7 +301,7 @@ final class EditorTabs {
     }
 
     private final class FileTab extends Tab {
-        final Path path;
+        Path path;
         final CodeArea area = new CodeArea();
         // The editor works with \n only; files that used \r\n are written back with \r\n.
         final boolean windowsLineEndings;
@@ -338,6 +357,15 @@ final class EditorTabs {
 
         boolean isDirty() {
             return !area.getText().equals(savedText);
+        }
+
+        /** Same text and undo history, new name. Colouring stays as it was opened (Java or plain). */
+        void relocate(Path newPath) {
+            path = newPath;
+            setGraphic(Icons.forFile(newPath));
+            getTooltip().setText(newPath.toString());
+            updateTitle();
+            updateJumpBar();
         }
 
         /** Right-aligned line number; the caret's line is brighter. */

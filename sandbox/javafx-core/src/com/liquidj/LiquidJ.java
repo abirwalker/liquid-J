@@ -1,19 +1,14 @@
 package com.liquidj;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
-
-import javax.lang.model.SourceVersion;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -33,7 +28,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ContentDisplay;
@@ -48,7 +42,6 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
@@ -104,6 +97,7 @@ public final class LiquidJ extends Application {
     private WindowChrome chrome;
     private EditorTabs editors;
     private ProjectTree tree;
+    private FileActions fileActions;
     private ConsolePane console;
     private WelcomePane welcome;
     private SplitPane split;
@@ -125,6 +119,8 @@ public final class LiquidJ extends Application {
         theme.lightProperty().addListener((obs, old, light) -> prefs.putBoolean(LIGHT_THEME_KEY, light));
         editors = new EditorTabs(theme);
         tree = new ProjectTree(editors::open);
+        fileActions = new FileActions(stage, theme, editors, tree, text -> setStatus(text, null));
+        tree.setFileActions(fileActions);
         console = new ConsolePane(runner::sendInput);
         welcome = new WelcomePane(this::chooseFolder, this::openProject);
         welcome.showRecent(recentFolders());
@@ -170,8 +166,6 @@ public final class LiquidJ extends Application {
         runButton.disableProperty().bind(cannotRun);
         Button stop = toolButton(Icons.stop(), "Stop (Shift+F5)", runner::stop);
         stop.disableProperty().bind(running.not());
-        Button themeToggle = toolButton(Icons.theme(), "Switch light or dark theme",
-                () -> theme.lightProperty().set(!theme.lightProperty().get()));
 
         Button minimize = captionButton(Icons.windowMinimize(), "Minimize", chrome::minimize);
         Button maximize = captionButton(Icons.windowMaximize(), "Maximize", chrome::toggleMaximize);
@@ -185,9 +179,7 @@ public final class LiquidJ extends Application {
         HBox captions = new HBox(minimize, maximize, close);
         captions.getStyleClass().add("caption-buttons");
 
-        Button newFile = toolButton(Icons.plus(), "New Java File (Ctrl+N)", this::newJavaFile);
-        newFile.disableProperty().bind(project.isNull());
-        HBox right = new HBox(6, capsule(runButton, stop), newFile, themeToggle, captions);
+        HBox right = new HBox(6, capsule(runButton, stop), captions);
         right.setAlignment(Pos.CENTER_RIGHT);
         // Only the caption buttons span the bar's full height; the rest stay their own size.
         right.setFillHeight(false);
@@ -786,63 +778,12 @@ public final class LiquidJ extends Application {
 
     // ---------- Dialogs ----------
 
+    /** Ctrl+N and the + buttons: a new file in the source root (src/ when the project has one). */
     private void newJavaFile() {
         Path folder = project.get();
-        if (folder == null) {
-            return;
+        if (folder != null) {
+            fileActions.newJavaFile(JavaRunner.sourceRoot(folder));
         }
-        Path sourceRoot = JavaRunner.sourceRoot(folder);
-        String where = sourceRoot.equals(folder) ? "the project folder" : folder.relativize(sourceRoot).toString();
-        String prompt = "File name, without .java (saved in " + where + ")";
-        TextInputDialog dialog = theme.style(new TextInputDialog());
-        dialog.initOwner(stage);
-        dialog.setTitle("New Java File");
-        dialog.setHeaderText(prompt);
-        Node okButton = dialog.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.setDisable(true);
-        dialog.getEditor().textProperty().addListener((obs, old, text) -> {
-            String problem = classNameProblem(baseName(text), sourceRoot);
-            okButton.setDisable(problem != null);
-            dialog.setHeaderText(problem == null || problem.isEmpty() ? prompt : problem);
-        });
-
-        dialog.showAndWait().map(LiquidJ::baseName).ifPresent(name -> {
-            Path file = sourceRoot.resolve(name + ".java");
-            try {
-                Files.writeString(file, "public class " + name + " {\n\n}\n", StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE_NEW);
-            } catch (IOException e) {
-                Alert alert = theme.style(new Alert(Alert.AlertType.ERROR, e.getMessage()));
-                alert.initOwner(stage);
-                alert.setHeaderText("Could not create " + file.getFileName());
-                alert.showAndWait();
-                return;
-            }
-            tree.refresh();
-            editors.open(file);
-            setStatus("Created " + folder.relativize(file), null);
-        });
-    }
-
-    /** "Shape.java" and "Shape" both name the file Shape.java. */
-    private static String baseName(String typed) {
-        String name = typed.strip();
-        return name.endsWith(".java") ? name.substring(0, name.length() - ".java".length()) : name;
-    }
-
-    /** Null when the name is usable, empty when nothing is typed yet, otherwise the reason. */
-    private static String classNameProblem(String name, Path sourceRoot) {
-        if (name.isEmpty()) {
-            return "";
-        }
-        // The file holds a public class of the same name, so the name must be a valid class name.
-        if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-            return "\"" + name + "\" can't be used: a Java file name must be a valid class name (letters, digits, _ and $, not starting with a digit).";
-        }
-        if (Files.exists(sourceRoot.resolve(name + ".java"))) {
-            return name + ".java already exists.";
-        }
-        return null;
     }
 
     private void showAbout() {

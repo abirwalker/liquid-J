@@ -31,7 +31,9 @@ final class ProjectTree {
             @Override
             protected void updateItem(Path item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : displayName(item));
+                boolean blank = empty || item == null;
+                setText(blank ? null : displayName(item));
+                setGraphic(blank ? null : Icons.forFile(item));
             }
         });
         view.setOnMouseClicked(event -> {
@@ -45,7 +47,7 @@ final class ProjectTree {
             }
         });
         view.setVisible(false);
-        Label empty = new Label("No folder open.\nFile > Open Folder (Ctrl+O)");
+        Label empty = new Label("No folder open");
         empty.getStyleClass().add("empty-state");
         // The tree panel is translucent, so the hint must be hidden, not just covered.
         empty.visibleProperty().bind(view.visibleProperty().not());

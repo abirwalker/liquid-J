@@ -42,8 +42,6 @@ final class JavaRunner {
             Pattern.compile("^(.+\\.java):(\\d+): (error|warning): (.+)$", Pattern.MULTILINE);
     private static final Pattern PACKAGE = Pattern.compile("^\\s*package\\s+([\\w.]+)\\s*;", Pattern.MULTILINE);
     private static final Pattern MAIN_METHOD = Pattern.compile("\\bstatic\\s+void\\s+main\\s*\\(");
-    private static final Pattern COMMENTS_AND_LITERALS = Pattern.compile(
-            "'(?:\\\\.|[^'\\\\])'|\"(?:\\\\.|[^\"\\\\])*\"|/\\*[\\s\\S]*?\\*/|//[^\\n]*");
 
     private final AtomicBoolean busy = new AtomicBoolean(false);
     private volatile boolean stopRequested;
@@ -110,7 +108,7 @@ final class JavaRunner {
         } catch (IOException e) {
             return Optional.empty();
         }
-        String bare = COMMENTS_AND_LITERALS.matcher(code).replaceAll(" ");
+        String bare = JavaSyntax.maskCommentsAndLiterals(code);
         if (!MAIN_METHOD.matcher(bare).find()) {
             return Optional.empty();
         }

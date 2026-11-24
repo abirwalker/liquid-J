@@ -1,33 +1,47 @@
 package com.liquidj;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 import javafx.application.Platform;
-import javafx.beans.value.ObservableBooleanValue;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-/** Program output plus a line for typing input to the running program. */
+import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.StyleClassedTextArea;
+
+/** Program output, coloured by stream, plus a line for typing input to the running program. */
 final class ConsolePane {
 
-    // A program stuck in a print loop would otherwise grow the TextArea until the UI freezes.
+    /** Style classes for output: program stdout, program stderr, and lines the IDE writes itself. */
+    enum Kind {
+        OUT("console-out"), ERR("console-err"), INFO("console-info");
+
+        final String styleClass;
+
+        Kind(String styleClass) {
+            this.styleClass = styleClass;
+        }
+    }
+
+    private record Chunk(String text, Kind kind) {}
+
+    // A program stuck in a print loop would otherwise grow the console until the UI freezes.
     private static final int MAX_CHARS = 200_000;
 
-    private final TextArea output = new TextArea();
+    private final StyleClassedTextArea output = new StyleClassedTextArea();
     private final TextField input = new TextField();
     private final VBox root;
-    private final StringBuilder pending = new StringBuilder();
+    private final List<Chunk> pending = new ArrayList<>();
 
-    ConsolePane(Runnable onRerun, ObservableBooleanValue rerunDisabled, Predicate<String> onInput) {
+    ConsolePane(Predicate<String> onInput) {
         output.setId("console-output");
         output.setEditable(false);
-        output.setFont(EditorTabs.CODE_FONT);
+        output.setWrapText(true);
+        output.setStyle("-fx-font-family: '" + EditorTabs.CODE_FONT_FAMILY + "';");
 
         input.setId("console-input");
         input.setFont(EditorTabs.CODE_FONT);
@@ -36,35 +50,31 @@ final class ConsolePane {
         input.setOnAction(event -> {
             String line = input.getText();
             if (onInput.test(line)) {
-                append(line + "\n");
+                append(line + "\n", Kind.OUT);
                 input.clear();
             }
         });
 
-        Button clear = new Button("Clear");
-        clear.setOnAction(event -> clear());
-        Button rerun = new Button("Rerun");
-        rerun.disableProperty().bind(rerunDisabled);
-        rerun.setOnAction(event -> onRerun.run());
-
-        HBox actions = new HBox(4, clear, rerun);
-        actions.getStyleClass().add("console-actions");
-        actions.setPadding(new Insets(4, 6, 4, 6));
-        root = new VBox(actions, output, input);
+        VirtualizedScrollPane<StyleClassedTextArea> scroller = new VirtualizedScrollPane<>(output);
+        root = new VBox(scroller, input);
         root.getStyleClass().add("console");
-        VBox.setVgrow(output, Priority.ALWAYS);
+        VBox.setVgrow(scroller, Priority.ALWAYS);
     }
 
     Node node() {
         return root;
     }
 
+    String text() {
+        return output.getText();
+    }
+
     /** Safe to call from any thread. Chunks are batched into one UI update per frame. */
-    void append(String text) {
+    void append(String text, Kind kind) {
         boolean scheduleFlush;
         synchronized (pending) {
             scheduleFlush = pending.isEmpty();
-            pending.append(text);
+            pending.add(new Chunk(text, kind));
         }
         if (scheduleFlush) {
             Platform.runLater(this::flush);
@@ -73,7 +83,7 @@ final class ConsolePane {
 
     void clear() {
         synchronized (pending) {
-            pending.setLength(0);
+            pending.clear();
         }
         output.clear();
     }
@@ -83,19 +93,22 @@ final class ConsolePane {
     }
 
     private void flush() {
-        String text;
+        List<Chunk> chunks;
         synchronized (pending) {
-            text = pending.toString();
-            pending.setLength(0);
+            chunks = new ArrayList<>(pending);
+            pending.clear();
         }
-        if (text.isEmpty()) {
+        if (chunks.isEmpty()) {
             return;
         }
-        output.appendText(text);
+        for (Chunk chunk : chunks) {
+            output.append(chunk.text(), chunk.kind().styleClass);
+        }
         int excess = output.getLength() - MAX_CHARS;
         if (excess > 0) {
             output.deleteText(0, excess);
         }
-        output.end();
+        output.moveTo(output.getLength());
+        output.requestFollowCaret();
     }
 }

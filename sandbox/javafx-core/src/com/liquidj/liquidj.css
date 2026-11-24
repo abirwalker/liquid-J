@@ -1,10 +1,14 @@
 /*
  * Liquid-J theme. Dark navy is the default; liquidj-light.css only redefines the colors below.
- * Colors and the Xcode-style layout come from sandbox/liquid-j-xcode.html.
+ * Colors, syntax colors and the Xcode-style layout come from sandbox/liquid-j-xcode.html.
  *
  * Glass (translucent fill, 1px rim, top shine, soft shadow) is used only on floating controls:
- * the toolbar buttons and the project navigator. Code, console and dialogs use solid fills,
- * because JavaFX has no backdrop blur and text behind a translucent panel shows through.
+ * the toolbar capsules, the activity view and the project navigator. Code, console, menus and
+ * dialogs use solid fills, because JavaFX has no backdrop blur and text behind a translucent
+ * panel shows through.
+ *
+ * JavaFX paints background layers on top of each other, so glass rims and shines are borders:
+ * stacked translucent fills would add up to a flat grey.
  */
 
 .root {
@@ -23,9 +27,13 @@
     -lj-on-accent: #ffffff;
     -lj-row-selected: rgba(96, 165, 250, 0.2);
     -lj-selection: rgba(96, 165, 250, 0.32);
+    -lj-active-line: rgba(255, 255, 255, 0.045);
     -lj-ok: #4ade80;
     -lj-error: #f87171;
     -lj-warning: #fbbf24;
+    -lj-java: #f0a060;
+    -lj-java-bg: rgba(240, 160, 96, 0.16);
+    -lj-folder: #60a5fa;
     -lj-thumb: rgba(255, 255, 255, 0.16);
     -lj-glass-fill: rgba(255, 255, 255, 0.055);
     -lj-glass-rim: rgba(255, 255, 255, 0.1);
@@ -36,6 +44,15 @@
     -lj-overlay: #161e2c;
     -lj-overlay-rim: rgba(255, 255, 255, 0.12);
     -lj-overlay-shadow: rgba(0, 0, 0, 0.5);
+
+    /* Xcode Default (Dark) syntax colors, comment raised for contrast. */
+    -lj-syntax-keyword: #ff7ab2;
+    -lj-syntax-type: #5dd8ff;
+    -lj-syntax-method: #67b7a4;
+    -lj-syntax-string: #ff8170;
+    -lj-syntax-number: #d9c97c;
+    -lj-syntax-comment: #8d99a8;
+    -lj-syntax-annotation: #e5a663;
 
     /* Modena derives the default controls (check boxes, combo boxes, dialogs) from these. */
     -fx-base: -lj-overlay;
@@ -55,6 +72,53 @@
 
     -fx-font-size: 13px;
     -fx-background-color: -lj-window;
+}
+
+/* ---------- Icons ---------- */
+
+.icon-filled {
+    -fx-fill: -lj-text-2;
+    -fx-stroke: transparent;
+}
+
+.icon-stroked {
+    -fx-fill: transparent;
+    -fx-stroke: -lj-text-2;
+    -fx-stroke-width: 1.4;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.icon-ok {
+    -fx-stroke: -lj-ok;
+    -fx-stroke-width: 1.8;
+}
+
+.icon-error {
+    -fx-stroke: -lj-error;
+}
+
+.icon-warning {
+    -fx-stroke: -lj-warning;
+}
+
+.icon-folder {
+    -fx-fill: -lj-folder;
+}
+
+.icon-file {
+    -fx-stroke: -lj-text-3;
+}
+
+.java-badge {
+    -fx-background-color: -lj-java-bg;
+    -fx-background-radius: 3;
+    -fx-text-fill: -lj-java;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 3 0 3;
+    -fx-min-width: 14;
+    -fx-alignment: center;
 }
 
 /* ---------- Menu bar and menus ---------- */
@@ -114,8 +178,7 @@
     -fx-text-fill: -lj-on-accent;
 }
 
-.check-menu-item:checked > .left-container > .check,
-.radio-menu-item:checked > .left-container > .radio {
+.check-menu-item:checked > .left-container > .check {
     -fx-background-color: -lj-text;
 }
 
@@ -127,96 +190,170 @@
     -fx-border-color: -lj-hairline transparent transparent transparent;
 }
 
-/* ---------- Toolbar: glass buttons ---------- */
+/* ---------- Toolbar: glass capsules and the activity view ---------- */
 
-.tool-bar {
+.window-toolbar {
     -fx-background-color: -lj-window;
     -fx-padding: 6 10 10 10;
-    -fx-spacing: 8;
 }
 
-.tool-bar .separator {
-    -fx-padding: 0 4;
-}
-
-.tool-bar .separator > .line {
-    -fx-border-color: transparent;
-}
-
-/*
- * JavaFX paints background layers on top of each other, so rim and shine are borders here:
- * stacked translucent fills would add up to a flat grey.
- */
-.button.glass {
+.capsule,
+.activity {
     -fx-background-color: -lj-glass-fill;
-    -fx-background-insets: 0;
-    -fx-background-radius: 8;
+    -fx-background-radius: 999;
     -fx-border-color: -lj-glass-rim, -lj-glass-shine transparent transparent transparent;
     -fx-border-width: 1, 1;
     -fx-border-insets: 0, 1;
-    -fx-border-radius: 8, 7;
-    -fx-text-fill: -lj-text;
-    -fx-padding: 5 14;
+    -fx-border-radius: 999, 999;
     -fx-effect: dropshadow(gaussian, -lj-glass-shadow, 10, 0, 0, 2);
 }
 
-.button.glass:hover {
+.capsule {
+    -fx-padding: 3;
+}
+
+.tool-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999;
+    -fx-padding: 6 11;
+    -fx-cursor: hand;
+}
+
+.tool-button:hover {
     -fx-background-color: -lj-glass-hover;
 }
 
-.button.glass:pressed {
+.tool-button:pressed {
     -fx-background-color: -lj-glass-pressed;
 }
 
-/* Run is the one primary action in the window, so it carries the accent. */
+/* Keyboard focus only; a mouse click should not leave a ring behind. */
+.tool-button:focus-visible {
+    -fx-border-color: -lj-accent;
+    -fx-border-radius: 999;
+    -fx-border-width: 1.5;
+}
+
+.tool-button:disabled {
+    -fx-opacity: 0.35;
+}
+
+.tool-button:hover .icon-filled,
+.tool-button.run .icon-filled {
+    -fx-fill: -lj-text;
+}
+
+.tool-button:hover .icon-stroked {
+    -fx-stroke: -lj-text;
+}
+
+.activity {
+    -fx-padding: 6 16 6 16;
+}
+
+.scheme {
+    -fx-text-fill: -lj-text-2;
+}
+
+.activity-divider {
+    -fx-background-color: -lj-hairline;
+    -fx-min-width: 1;
+    -fx-pref-width: 1;
+    -fx-max-width: 1;
+    -fx-pref-height: 14;
+    -fx-max-height: 14;
+}
+
+.activity-status {
+    -fx-text-fill: -lj-text;
+}
+
+#build-progress {
+    -fx-pref-height: 2;
+    -fx-max-height: 2;
+    -fx-translate-y: 5;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+#build-progress > .track {
+    -fx-background-color: transparent;
+}
+
+#build-progress > .bar {
+    -fx-background-color: -lj-accent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 1;
+    -fx-padding: 1;
+}
+
+.issue-badge {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -lj-text-2;
+    -fx-padding: 1 6;
+    -fx-graphic-text-gap: 5;
+    -fx-cursor: hand;
+}
+
+.issue-badge:hover {
+    -fx-background-color: -lj-hover;
+    -fx-text-fill: -lj-text;
+}
+
+/* Run is the one primary action, so the welcome screen's Open button shares this look. */
 .button.glass.primary {
     -fx-background-color: -lj-accent-solid;
+    -fx-background-radius: 8;
     -fx-border-color: -lj-glass-rim;
-    -fx-border-width: 1;
-    -fx-border-insets: 0;
     -fx-border-radius: 8;
     -fx-text-fill: -lj-on-accent;
+    -fx-padding: 7 16;
+    -fx-graphic-text-gap: 8;
+    -fx-cursor: hand;
 }
 
 .button.glass.primary:hover {
     -fx-background-color: -lj-accent-solid-hover;
 }
 
-.button.glass:focused {
-    -fx-border-color: -lj-accent;
-    -fx-border-width: 1.5;
-    -fx-border-insets: 0;
-    -fx-border-radius: 8;
+.button.glass.primary .icon-stroked {
+    -fx-stroke: -lj-on-accent;
 }
 
-.button:disabled {
-    -fx-opacity: 0.4;
-}
-
-/* ---------- Split panes ---------- */
+/* ---------- Workspace: floating navigator and the editor panel ---------- */
 
 .split-pane {
     -fx-background-color: -lj-window;
     -fx-padding: 0;
 }
 
-/* 5px wide so it is easy to grab, drawn as a 1px line. */
-.split-pane > .split-pane-divider {
-    -fx-background-color: transparent, -lj-hairline;
-    -fx-background-insets: 0, 0 2 0 2;
-    -fx-padding: 0 2.5 0 2.5;
+.workspace {
+    -fx-padding: 0 10 10 0;
 }
 
-.split-pane:vertical > .split-pane-divider {
+/* Between floating panels the divider is a gap, not a line. */
+.workspace > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-padding: 0 2 0 2;
+}
+
+.content-panel {
+    -fx-background-color: -lj-editor;
+    -fx-background-radius: 12;
+    -fx-border-color: -lj-hairline;
+    -fx-border-radius: 12;
+}
+
+.content-panel > .split-pane-divider {
+    -fx-background-color: transparent, -lj-hairline;
     -fx-background-insets: 0, 2 0 2 0;
     -fx-padding: 2.5 0 2.5 0;
 }
 
-/* ---------- Project navigator (floating, glass) ---------- */
-
 .navigator {
     -fx-background-color: -lj-window;
-    -fx-padding: 0 8 10 10;
+    -fx-padding: 0 8 0 10;
 }
 
 .navigator > .tree-view {
@@ -227,7 +364,7 @@
     -fx-border-width: 1, 1;
     -fx-border-insets: 0, 1;
     -fx-border-radius: 12, 11;
-    -fx-padding: 6;
+    -fx-padding: 8 6 8 6;
     -fx-effect: dropshadow(gaussian, -lj-glass-shadow, 14, 0, 0, 3);
 }
 
@@ -236,6 +373,7 @@
     -fx-background-radius: 6;
     -fx-text-fill: -lj-text-2;
     -fx-padding: 4 8 4 4;
+    -fx-graphic-text-gap: 7;
 }
 
 .tree-view > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:hover {
@@ -249,36 +387,124 @@
 
 .tree-cell > .tree-disclosure-node > .arrow {
     -fx-background-color: -lj-text-3;
+    -fx-padding: 0.25em 0.2em;
 }
 
+/* ---------- Empty states and the welcome screen ---------- */
+
 .empty-state {
+    -fx-background-color: transparent;
+}
+
+.empty-state .label,
+.navigator > .empty-state {
     -fx-text-fill: -lj-text-3;
-    -fx-text-alignment: center;
+}
+
+.empty-title {
+    -fx-font-size: 16px;
+    -fx-text-fill: -lj-text-2;
+}
+
+.hint-action {
+    -fx-text-fill: -lj-text-2;
+}
+
+.hint-keys {
+    -fx-text-fill: -lj-text-3;
+    -fx-font-size: 11px;
+    -fx-background-color: -lj-hover;
+    -fx-background-radius: 4;
+    -fx-border-color: -lj-hairline;
+    -fx-border-radius: 4;
+    -fx-padding: 1 6 1 6;
+}
+
+.welcome-layer {
+    -fx-background-color: -lj-window;
+}
+
+.welcome {
+    -fx-padding: 40;
+}
+
+.welcome-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -lj-text;
+}
+
+.welcome-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: -lj-text-2;
+}
+
+.welcome-section {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -lj-text-3;
+    -fx-padding: 8 0 2 10;
+}
+
+.welcome-empty {
+    -fx-text-fill: -lj-text-3;
+    -fx-padding: 4 10;
+}
+
+.recent-row {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-padding: 7 10;
+    -fx-cursor: hand;
+}
+
+.recent-row:hover {
+    -fx-background-color: -lj-hover;
+}
+
+.recent-row:focused {
+    -fx-background-color: -lj-row-selected;
+}
+
+.recent-name {
+    -fx-text-fill: -lj-text;
+    -fx-font-size: 13.5px;
+}
+
+.recent-path {
+    -fx-text-fill: -lj-text-3;
+    -fx-font-size: 11.5px;
 }
 
 /* ---------- Tabs ---------- */
 
 .tab-pane > .tab-header-area {
-    -fx-padding: 0 8 0 8;
+    -fx-padding: 6 10 0 10;
 }
 
 .tab-pane > .tab-header-area > .tab-header-background {
-    -fx-background-color: -lj-hairline, -lj-window;
+    -fx-background-color: -lj-hairline, -lj-editor;
     -fx-background-insets: 0, 0 0 1 0;
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab {
     -fx-background-color: transparent;
-    -fx-background-radius: 7 7 0 0;
-    -fx-padding: 4 10 4 12;
+    -fx-background-radius: 7;
+    -fx-background-insets: 0 1 5 1;
+    -fx-padding: 3 10 8 10;
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab:hover {
     -fx-background-color: -lj-hover;
 }
 
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -lj-pressed;
+}
+
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
     -fx-text-fill: -lj-text-3;
+    -fx-graphic-text-gap: 7;
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
@@ -289,72 +515,204 @@
     -fx-background-color: -lj-text-3;
 }
 
-.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .focus-indicator {
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .focus-indicator {
     -fx-border-color: transparent;
 }
 
 .tab-pane > .tab-content-area {
     -fx-padding: 0;
+    -fx-background-color: transparent;
 }
 
-.editor-area,
-.editor-area > .tab-pane > .tab-content-area,
-.editor-area > .tab-pane > .tab-header-area > .headers-region > .tab:selected {
+.editor-area {
     -fx-background-color: -lj-editor;
 }
 
-.debug-area > .tab-content-area,
-.debug-area > .tab-header-area > .headers-region > .tab:selected {
-    -fx-background-color: -lj-console;
+/* The console tabs read as a header: plain text, the selected one underlined. */
+.debug-area > .tab-header-area > .tab-header-background {
+    -fx-background-color: -lj-hairline, -lj-console;
 }
 
-/* ---------- Text areas: editor and console ---------- */
-
-.text-area,
-.text-area:focused {
+.debug-area > .tab-header-area > .headers-region > .tab,
+.debug-area > .tab-header-area > .headers-region > .tab:hover {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-background-radius: 0;
-    -fx-text-fill: -lj-text;
+    -fx-padding: 3 4 7 4;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
 }
 
-.text-area > .scroll-pane,
-.text-area > .scroll-pane > .viewport,
-.text-area > .scroll-pane > .viewport > * > .content {
+.debug-area > .tab-header-area > .headers-region > .tab:selected {
     -fx-background-color: transparent;
+    -fx-border-color: -lj-accent;
 }
 
-.editor-area .text-area > .scroll-pane > .viewport > * > .content {
-    -fx-padding: 10 14 10 14;
+.debug-area > .tab-header-area > .headers-region > .tab {
+    -fx-border-insets: 0 6 0 6;
 }
 
-.console,
-.console > .text-area {
-    -fx-background-color: -lj-console;
+.count-badge {
+    -fx-background-color: -lj-pressed;
+    -fx-background-radius: 999;
+    -fx-text-fill: -lj-text;
+    -fx-font-size: 11px;
+    -fx-padding: 0 6 0 6;
 }
 
-.console > .text-area > .scroll-pane > .viewport > * > .content {
-    -fx-padding: 8 12 8 12;
+.debug-actions {
+    -fx-padding: 4 10 0 0;
 }
 
-.console-actions {
-    -fx-background-color: -lj-console;
-}
-
-.console-actions > .button {
+.debug-actions > .button {
     -fx-background-color: transparent;
     -fx-background-radius: 6;
     -fx-text-fill: -lj-text-2;
-    -fx-padding: 3 10;
+    -fx-padding: 3 9;
+    -fx-cursor: hand;
 }
 
-.console-actions > .button:hover {
+.debug-actions > .button:hover {
     -fx-background-color: -lj-hover;
     -fx-text-fill: -lj-text;
 }
 
-.console-actions > .button:pressed {
-    -fx-background-color: -lj-pressed;
+.debug-actions > .button:disabled {
+    -fx-opacity: 0.4;
+}
+
+/* ---------- Jump bar ---------- */
+
+.jump-bar {
+    -fx-background-color: -lj-hairline, -lj-editor;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 5 14 6 14;
+    -fx-spacing: 6;
+}
+
+.jump-crumb {
+    -fx-text-fill: -lj-text-3;
+    -fx-font-size: 12px;
+    -fx-graphic-text-gap: 5;
+}
+
+.jump-separator {
+    -fx-text-fill: -lj-text-3;
+    -fx-font-size: 12px;
+}
+
+.symbol-badge {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 3;
+    -fx-padding: 0 3 0 3;
+    -fx-min-width: 14;
+    -fx-alignment: center;
+}
+
+.symbol-badge.class {
+    -fx-text-fill: -lj-syntax-type;
+    -fx-background-color: -lj-hover;
+}
+
+.symbol-badge.method {
+    -fx-text-fill: -lj-syntax-method;
+    -fx-background-color: -lj-hover;
+}
+
+/* ---------- Code editor (RichTextFX CodeArea) ---------- */
+
+.code-area {
+    -fx-background-color: -lj-editor;
+    -fx-font-size: 13.5px;
+    -fx-padding: 8 0 8 0;
+}
+
+.code-area .text {
+    -fx-fill: -lj-text;
+}
+
+.code-area .paragraph-box {
+    -fx-padding: 2 0 2 0;
+}
+
+.code-area .caret {
+    -fx-stroke: -lj-accent;
+    -fx-stroke-width: 2;
+}
+
+.code-area .selection {
+    -fx-fill: -lj-selection;
+}
+
+.code-area .line-highlighter {
+    -fx-fill: -lj-active-line;
+}
+
+.code-area .lineno {
+    -fx-background-color: -lj-editor;
+    -fx-text-fill: -lj-text-3;
+    -fx-padding: 0 16 0 14;
+}
+
+.code-area .keyword {
+    -fx-fill: -lj-syntax-keyword;
+}
+
+.code-area .type {
+    -fx-fill: -lj-syntax-type;
+}
+
+.code-area .method {
+    -fx-fill: -lj-syntax-method;
+}
+
+.code-area .string {
+    -fx-fill: -lj-syntax-string;
+}
+
+.code-area .number {
+    -fx-fill: -lj-syntax-number;
+}
+
+.code-area .comment {
+    -fx-fill: -lj-syntax-comment;
+}
+
+.code-area .annotation {
+    -fx-fill: -lj-syntax-annotation;
+}
+
+/* ---------- Console ---------- */
+
+.console,
+#console-output {
+    -fx-background-color: -lj-console;
+}
+
+#console-output {
+    -fx-font-size: 13px;
+    -fx-padding: 8 14 8 14;
+}
+
+#console-output .caret {
+    -fx-stroke: transparent;
+}
+
+#console-output .selection {
+    -fx-fill: -lj-selection;
+}
+
+#console-output .text,
+#console-output .console-out {
+    -fx-fill: -lj-text;
+}
+
+#console-output .console-err {
+    -fx-fill: -lj-error;
+}
+
+#console-output .console-info {
+    -fx-fill: -lj-text-3;
 }
 
 #console-input {
@@ -363,7 +721,7 @@
     -fx-background-radius: 0;
     -fx-text-fill: -lj-text;
     -fx-prompt-text-fill: -lj-text-3;
-    -fx-padding: 7 12;
+    -fx-padding: 8 14;
 }
 
 #console-input:focused {
@@ -378,7 +736,7 @@
 
 .list-view {
     -fx-background-color: -lj-console;
-    -fx-padding: 4;
+    -fx-padding: 6;
 }
 
 .list-view > .placeholder > .label {
@@ -389,7 +747,7 @@
     -fx-background-color: transparent;
     -fx-background-radius: 6;
     -fx-text-fill: -lj-text;
-    -fx-padding: 5 10;
+    -fx-padding: 6 10;
     -fx-graphic-text-gap: 10;
 }
 
@@ -401,43 +759,27 @@
     -fx-background-color: -lj-row-selected;
 }
 
-.issue-kind {
-    -fx-font-weight: bold;
-    -fx-min-width: 56;
-}
-
-.issue-kind.error {
-    -fx-text-fill: -lj-error;
-}
-
-.issue-kind.warning {
-    -fx-text-fill: -lj-warning;
-}
-
 /* ---------- Status bar ---------- */
 
 .status-bar {
-    -fx-background-color: -lj-hairline, -lj-window;
-    -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 5 12;
+    -fx-background-color: -lj-window;
+    -fx-padding: 0 12 5 12;
 }
 
-.status-bar > .label {
+.status-bar .label {
     -fx-text-fill: -lj-text-3;
     -fx-font-size: 12px;
 }
 
-.status-bar > .label.ok {
-    -fx-text-fill: -lj-ok;
-}
-
-.status-bar > .label.error {
-    -fx-text-fill: -lj-error;
+.status-bar > .issue-badge {
+    -fx-font-size: 12px;
+    -fx-text-fill: -lj-text-3;
 }
 
 /* ---------- Scroll bars: thin, no arrow buttons ---------- */
 
-.scroll-bar {
+.scroll-bar,
+.virtualized-scroll-pane > .scroll-bar {
     -fx-background-color: transparent;
 }
 

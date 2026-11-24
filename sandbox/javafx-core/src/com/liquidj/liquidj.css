@@ -11,8 +11,8 @@
  * because JavaFX has no backdrop blur and text behind a translucent panel shows through.
  * JavaFX paints background layers on top of each other, so glass rims and shines are borders.
  *
- * Fonts are bundled (Theme.loadFonts). JavaFX registers each Inter weight as its own family,
- * so emphasis uses the family "Inter SemiBold" instead of -fx-font-weight.
+ * Fonts are bundled (Theme.loadFonts). JavaFX registers each Geist weight as its own family,
+ * so emphasis uses the family "Geist SemiBold" instead of -fx-font-weight.
  */
 
 .root {
@@ -74,9 +74,15 @@
     -fx-highlight-fill: -lj-selection;
     -fx-highlight-text-fill: -lj-text;
 
-    -fx-font-family: "Inter";
-    -fx-font-size: 13px;
+    -fx-font-family: "Geist";
+    -fx-font-size: 13.5px;
     -fx-background-color: -lj-editor;
+}
+
+/* ClearType-style smoothing is much sharper on Windows than the default grey smoothing.
+   JavaFX falls back to grey by itself where text sits on a translucent fill. */
+.text {
+    -fx-font-smoothing-type: lcd;
 }
 
 /* ---------- Window frame and title bar ---------- */
@@ -96,7 +102,7 @@
 }
 
 .app-name {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-text-fill: -lj-text;
     -fx-padding: 0 6 0 0;
 }
@@ -197,7 +203,7 @@
     -fx-background-color: -lj-java-bg;
     -fx-background-radius: 3;
     -fx-text-fill: -lj-java;
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 9px;
     -fx-padding: 0 3 0 3;
     -fx-min-width: 14;
@@ -344,7 +350,7 @@
     -fx-background-color: -lj-accent-solid;
     -fx-background-radius: 7;
     -fx-text-fill: -lj-on-accent;
-    -fx-font-family: "Inter Medium";
+    -fx-font-family: "Geist Medium";
     -fx-padding: 8 16;
     -fx-graphic-text-gap: 8;
     -fx-cursor: hand;
@@ -456,7 +462,7 @@
     -fx-background-color: -lj-error;
     -fx-background-radius: 999;
     -fx-text-fill: -lj-editor;
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 10px;
     -fx-padding: 0 5 0 5;
 }
@@ -627,7 +633,7 @@
 }
 
 .symbol-badge {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 9px;
     -fx-background-radius: 3;
     -fx-background-color: -lj-hover;
@@ -722,7 +728,7 @@
 /* ---------- Empty states and the welcome screen ---------- */
 
 .empty-title {
-    -fx-font-family: "Inter Medium";
+    -fx-font-family: "Geist Medium";
     -fx-font-size: 15px;
     -fx-text-fill: -lj-text-2;
 }
@@ -732,7 +738,7 @@
 }
 
 .hint-keys {
-    -fx-font-family: "JetBrains Mono";
+    -fx-font-family: "Geist Mono";
     -fx-text-fill: -lj-text-3;
     -fx-font-size: 11px;
     -fx-background-color: -lj-chrome;
@@ -751,7 +757,7 @@
 }
 
 .welcome-title {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 32px;
     -fx-text-fill: -lj-text;
 }
@@ -762,7 +768,7 @@
 }
 
 .welcome-section {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 12px;
     -fx-text-fill: -lj-text-3;
     -fx-padding: 8 0 2 10;
@@ -789,7 +795,7 @@
 }
 
 .recent-name {
-    -fx-font-family: "Inter Medium";
+    -fx-font-family: "Geist Medium";
     -fx-text-fill: -lj-text;
     -fx-font-size: 13.5px;
 }
@@ -814,7 +820,7 @@
 }
 
 .console-title {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-text-fill: -lj-text-2;
     -fx-font-size: 12px;
 }
@@ -943,7 +949,7 @@
 }
 
 .dialog-pane > .header-panel > .label {
-    -fx-font-family: "Inter SemiBold";
+    -fx-font-family: "Geist SemiBold";
     -fx-font-size: 14px;
     -fx-text-fill: -lj-text;
 }

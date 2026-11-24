@@ -17,10 +17,11 @@ import javafx.scene.text.Font;
  */
 final class Theme {
 
-    // Inter (UI) and JetBrains Mono (code), SIL Open Font License; licenses sit next to the files.
-    // JavaFX registers each Inter weight as its own family: "Inter", "Inter Medium", "Inter SemiBold".
+    // Geist (UI) and Geist Mono (code), SIL Open Font License; the license sits next to the files.
+    // SF Pro cannot be bundled: Apple licenses it for Apple platforms only. Geist is drawn in that style.
+    // JavaFX registers each Geist weight as its own family: "Geist", "Geist Medium", "Geist SemiBold".
     private static final List<String> FONT_FILES = List.of(
-            "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "JetBrainsMono-Regular.ttf");
+            "Geist-Regular.ttf", "Geist-Medium.ttf", "Geist-SemiBold.ttf", "GeistMono-Regular.ttf");
 
     private static final String BASE = stylesheet("liquidj.css");
     private static final String LIGHT = stylesheet("liquidj-light.css");

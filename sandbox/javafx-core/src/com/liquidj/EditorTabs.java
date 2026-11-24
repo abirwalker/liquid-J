@@ -42,8 +42,8 @@ import org.fxmisc.richtext.model.TwoDimensional;
 /** One tab per open file: loading, editing, syntax colours, unsaved-change tracking and saving. */
 final class EditorTabs {
 
-    // JetBrains Mono is bundled (Theme.loadFonts); the rest are fallbacks if it failed to load.
-    static final String CODE_FONT_FAMILY = firstInstalled("JetBrains Mono", "Cascadia Mono", "Consolas",
+    // Geist Mono is bundled (Theme.loadFonts); the rest are fallbacks if it failed to load.
+    static final String CODE_FONT_FAMILY = firstInstalled("Geist Mono", "Cascadia Mono", "Consolas",
             "Menlo", "DejaVu Sans Mono", "Monospaced");
     static final Font CODE_FONT = Font.font(CODE_FONT_FAMILY, 13);
 

@@ -843,7 +843,7 @@ public final class LiquidJ extends Application {
         Alert about = theme.style(new Alert(Alert.AlertType.INFORMATION,
                 "A small Java IDE for CSE 342 (Advanced Programming Lab).\n\n"
                         + "Java " + Runtime.version() + "\nJavaFX " + System.getProperty("javafx.version")
-                        + "\n\nFonts: Inter and JetBrains Mono, SIL Open Font License 1.1."));
+                        + "\n\nFonts: Geist and Geist Mono, SIL Open Font License 1.1."));
         about.initOwner(stage);
         about.setTitle("About Liquid-J");
         about.setHeaderText("Liquid-J " + VERSION);

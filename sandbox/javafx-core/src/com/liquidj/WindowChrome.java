@@ -1,5 +1,7 @@
 package com.liquidj;
 
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
@@ -21,7 +23,7 @@ final class WindowChrome {
 
     private final Stage stage;
     private Rectangle2D restoreBounds;
-    private boolean maximized;
+    private final ReadOnlyBooleanWrapper maximized = new ReadOnlyBooleanWrapper(false);
 
     private double dragOffsetX;
     private double dragOffsetY;
@@ -37,8 +39,8 @@ final class WindowChrome {
         this.stage = stage;
     }
 
-    boolean isMaximized() {
-        return maximized;
+    ReadOnlyBooleanProperty maximizedProperty() {
+        return maximized.getReadOnlyProperty();
     }
 
     void minimize() {
@@ -47,14 +49,14 @@ final class WindowChrome {
 
     /** Fills the visible area of the current screen (not the taskbar), or goes back to the old size. */
     void toggleMaximize() {
-        if (maximized) {
-            maximized = false;
+        if (maximized.get()) {
+            maximized.set(false);
             apply(restoreBounds);
             return;
         }
         restoreBounds = currentBounds();
         Screen screen = Screen.getScreensForRectangle(restoreBounds).stream().findFirst().orElse(Screen.getPrimary());
-        maximized = true;
+        maximized.set(true);
         apply(screen.getVisualBounds());
     }
 
@@ -72,7 +74,7 @@ final class WindowChrome {
             if (!dragging) {
                 return;
             }
-            if (maximized) {
+            if (maximized.get()) {
                 // Dragging a maximized window restores it under the pointer, as Windows does.
                 double ratio = dragOffsetX / stage.getWidth();
                 toggleMaximize();
@@ -92,7 +94,7 @@ final class WindowChrome {
     /** Edges and corners of the scene resize the window. Filters run before any control sees the press. */
     void enableResize(Scene scene) {
         scene.addEventFilter(MouseEvent.MOUSE_MOVED, event -> {
-            resizeCursor = maximized ? Cursor.DEFAULT : edgeCursor(event.getSceneX(), event.getSceneY(), scene);
+            resizeCursor = maximized.get() ? Cursor.DEFAULT : edgeCursor(event.getSceneX(), event.getSceneY(), scene);
             scene.setCursor(resizeCursor);
         });
         scene.addEventFilter(MouseEvent.MOUSE_EXITED_TARGET, event -> {

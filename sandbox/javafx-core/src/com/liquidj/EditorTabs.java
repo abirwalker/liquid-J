@@ -9,13 +9,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -30,21 +30,24 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.TwoDimensional;
 
 /** One tab per open file: loading, editing, syntax colours, unsaved-change tracking and saving. */
 final class EditorTabs {
 
-    static final String CODE_FONT_FAMILY = firstInstalled("Cascadia Mono", "Consolas", "Menlo",
-            "DejaVu Sans Mono", "Monospaced");
+    // JetBrains Mono is bundled (Theme.loadFonts); the rest are fallbacks if it failed to load.
+    static final String CODE_FONT_FAMILY = firstInstalled("JetBrains Mono", "Cascadia Mono", "Consolas",
+            "Menlo", "DejaVu Sans Mono", "Monospaced");
     static final Font CODE_FONT = Font.font(CODE_FONT_FAMILY, 13);
+
+    private static final PseudoClass CURRENT_LINE = PseudoClass.getPseudoClass("current");
 
     private static final String INDENT = "    ";
     // The editor gets slow on huge files; student sources are far below this.
@@ -294,14 +297,7 @@ final class EditorTabs {
             this.savedText = diskText.replace("\r\n", "\n");
 
             area.setStyle("-fx-font-family: '" + CODE_FONT_FAMILY + "';");
-            // LineNumberFactory sets an italic font in code; an inline style is the only thing that overrides it.
-            IntFunction<Node> lineNumbers = LineNumberFactory.get(area);
-            area.setParagraphGraphicFactory(line -> {
-                Node number = lineNumbers.apply(line);
-                number.setStyle("-fx-font-family: '" + CODE_FONT_FAMILY + "'; -fx-font-style: normal;"
-                        + " -fx-text-fill: -lj-text-3;");
-                return number;
-            });
+            area.setParagraphGraphicFactory(this::lineNumber);
             area.setLineHighlighterOn(true);
             area.replaceText(savedText);
             area.getUndoManager().forgetHistory();
@@ -342,6 +338,24 @@ final class EditorTabs {
 
         boolean isDirty() {
             return !area.getText().equals(savedText);
+        }
+
+        /** Right-aligned line number; the caret's line is brighter. */
+        private Node lineNumber(int paragraph) {
+            Label number = new Label(String.valueOf(paragraph + 1));
+            number.getStyleClass().add("lineno");
+            number.setAlignment(Pos.CENTER_RIGHT);
+            number.setStyle("-fx-font-family: '" + CODE_FONT_FAMILY + "';");
+            // Room for four digits, so the code does not shift sideways as the file grows.
+            number.setMinWidth(Region.USE_PREF_SIZE);
+            number.setPrefWidth(CODE_FONT.getSize() * 0.62 * 4 + 28);
+            BooleanBinding current = Bindings.createBooleanBinding(
+                    () -> area.getCurrentParagraph() == paragraph, area.currentParagraphProperty());
+            number.pseudoClassStateChanged(CURRENT_LINE, current.get());
+            current.addListener((obs, old, now) -> number.pseudoClassStateChanged(CURRENT_LINE, now));
+            // The label must own the binding: the area only holds bindings weakly.
+            number.getProperties().put(CURRENT_LINE, current);
+            return number;
         }
 
         void updateTitle() {

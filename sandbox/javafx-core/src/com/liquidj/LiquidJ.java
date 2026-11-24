@@ -10,6 +10,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 import javax.lang.model.SourceVersion;
@@ -25,6 +26,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -34,22 +36,25 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
-import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -59,20 +64,24 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import org.fxmisc.richtext.GenericStyledArea;
+
 /**
  * Window layout and the commands that connect the tree, editor, console and runner.
- * The layout follows Xcode: a full-height sidebar (window controls, run controls, navigators)
- * beside the main column (toolbar, editor, console, status line). The window draws its own
- * title bar, so WindowChrome handles moving and resizing.
+ * Layout follows Zed on Windows: one title bar with the menus, build status and window buttons;
+ * a sidebar with the navigators; the editor pane with tabs, path bar, code and console; and a
+ * status bar with panel toggles. The window draws its own title bar, so WindowChrome moves and
+ * resizes it.
  */
 public final class LiquidJ extends Application {
 
-    private static final String VERSION = "0.3.0";
+    private static final String VERSION = "0.4.0";
     private static final String LAST_FOLDER_KEY = "lastFolder";
     private static final String RECENT_FOLDERS_KEY = "recentFolders";
     private static final String LIGHT_THEME_KEY = "lightTheme";
     private static final int MAX_RECENT = 6;
-    private static final double SIDEBAR_WIDTH = 0.22;
+    private static final double SIDEBAR_WIDTH = 0.2;
+    private static final double CONSOLE_DIVIDER = 0.68;
 
     private final Preferences prefs = Preferences.userNodeForPackage(LiquidJ.class);
     private final JavaRunner runner = new JavaRunner();
@@ -87,10 +96,9 @@ public final class LiquidJ extends Application {
     private final Label status = new Label();
     private final StackPane statusIcon = new StackPane();
     private final Label scheme = new Label();
-    private final Label title = new Label();
     private final ToggleGroup navigatorTabs = new ToggleGroup();
-    private final ToggleButton filesTab = new ToggleButton();
-    private final ToggleButton issuesTab = new ToggleButton();
+    private final ToggleButton filesTab = new ToggleButton("Files");
+    private final ToggleButton issuesTab = new ToggleButton("Issues");
 
     private Stage stage;
     private WindowChrome chrome;
@@ -99,13 +107,17 @@ public final class LiquidJ extends Application {
     private ConsolePane console;
     private WelcomePane welcome;
     private SplitPane split;
-    private VBox sidebarBody;
+    private SplitPane editorSplit;
+    private Node sidebar;
+    private Node consoleArea;
     private double sidebarDivider = SIDEBAR_WIDTH;
+    private double consoleDivider = CONSOLE_DIVIDER;
     private String lastMainClass;
     private boolean runRequested;
 
     @Override
     public void start(Stage primaryStage) {
+        Theme.loadFonts();
         stage = primaryStage;
         stage.initStyle(StageStyle.UNDECORATED);
         chrome = new WindowChrome(stage);
@@ -117,12 +129,14 @@ public final class LiquidJ extends Application {
         welcome = new WelcomePane(this::chooseFolder, this::openProject);
         welcome.showRecent(recentFolders());
 
-        split = new SplitPane(sidebar(), mainColumn());
+        sidebar = sidebar();
+        split = new SplitPane(sidebar, editorPane());
         split.getStyleClass().add("window-split");
         split.setDividerPositions(SIDEBAR_WIDTH);
-        SplitPane.setResizableWithParent(split.getItems().get(0), false);
+        SplitPane.setResizableWithParent(sidebar, false);
+        VBox.setVgrow(split, Priority.ALWAYS);
 
-        StackPane root = new StackPane(split);
+        VBox root = new VBox(titleBar(), split, statusBar());
         root.getStyleClass().add("window-root");
         Scene scene = new Scene(root, 1280, 820);
         theme.attach(scene);
@@ -130,7 +144,6 @@ public final class LiquidJ extends Application {
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(560);
-        stage.setTitle("Liquid-J");
         stage.setOnCloseRequest(event -> {
             if (!editors.closeAll()) {
                 event.consume();
@@ -145,15 +158,13 @@ public final class LiquidJ extends Application {
         initialFolder().ifPresent(this::openProject);
     }
 
-    // ---------- Sidebar ----------
+    // ---------- Title bar ----------
 
-    private Node sidebar() {
-        HBox windowButtons = new HBox(8,
-                windowButton("close", "Close", this::exit),
-                windowButton("minimize", "Minimize", () -> chrome.minimize()),
-                windowButton("maximize", "Maximize or restore", () -> chrome.toggleMaximize()));
-        windowButtons.getStyleClass().add("window-buttons");
-        windowButtons.setAlignment(Pos.CENTER_LEFT);
+    private Node titleBar() {
+        Label appName = new Label("Liquid-J");
+        appName.getStyleClass().add("app-name");
+        HBox left = new HBox(6, appName, menuBar());
+        left.setAlignment(Pos.CENTER_LEFT);
 
         Button runButton = toolButton(Icons.play(), "Run (F5)", this::run);
         runButton.setId("run-button");
@@ -161,178 +172,88 @@ public final class LiquidJ extends Application {
         runButton.disableProperty().bind(cannotRun);
         Button stop = toolButton(Icons.stop(), "Stop (Shift+F5)", runner::stop);
         stop.disableProperty().bind(running.not());
+        Button themeToggle = toolButton(Icons.theme(), "Switch light or dark theme",
+                () -> theme.lightProperty().set(!theme.lightProperty().get()));
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox topRow = new HBox(10, windowButtons, appMenu(), spacer, capsule(runButton, stop));
-        topRow.getStyleClass().add("sidebar-top");
-        topRow.setAlignment(Pos.CENTER_LEFT);
-        chrome.makeDragArea(topRow);
+        Button minimize = captionButton(Icons.windowMinimize(), "Minimize", chrome::minimize);
+        Button maximize = captionButton(Icons.windowMaximize(), "Maximize", chrome::toggleMaximize);
+        maximize.getStyleClass().add("maximize");
+        chrome.maximizedProperty().addListener((obs, old, isMax) -> {
+            maximize.setGraphic(isMax ? Icons.windowRestore() : Icons.windowMaximize());
+            maximize.getTooltip().setText(isMax ? "Restore" : "Maximize");
+        });
+        Button close = captionButton(Icons.windowClose(), "Close", this::exit);
+        close.getStyleClass().add("close");
+        HBox captions = new HBox(minimize, maximize, close);
+        captions.getStyleClass().add("caption-buttons");
 
-        sidebarBody = new VBox(navigatorTabStrip(), navigatorContent(), sidebarFooter());
-        VBox.setVgrow(sidebarBody.getChildren().get(1), Priority.ALWAYS);
-        VBox.setVgrow(sidebarBody, Priority.ALWAYS);
+        Button newClass = toolButton(Icons.plus(), "New Class (Ctrl+N)", this::newClass);
+        newClass.disableProperty().bind(project.isNull());
+        HBox right = new HBox(6, capsule(runButton, stop), newClass, themeToggle, captions);
+        right.setAlignment(Pos.CENTER_RIGHT);
+        // Only the caption buttons span the bar's full height; the rest stay their own size.
+        right.setFillHeight(false);
+        captions.setMinHeight(Region.USE_PREF_SIZE);
 
-        VBox sidebar = new VBox(topRow, sidebarBody);
-        sidebar.getStyleClass().add("sidebar");
-        return sidebar;
+        BorderPane bar = new BorderPane(activityView(), null, right, null, left);
+        bar.getStyleClass().add("title-bar");
+        BorderPane.setAlignment(left, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(right, Pos.CENTER_RIGHT);
+        chrome.makeDragArea(bar);
+        return bar;
     }
 
-    /** File, View, Run and Help in one menu; MenuButton installs the item shortcuts on the scene. */
-    private Node appMenu() {
+    private MenuBar menuBar() {
         Menu file = new Menu("File", null,
+                item("New Class...", "Shortcut+N", this::newClass, project.isNull()),
                 item("Open Folder...", "Shortcut+O", this::chooseFolder, null),
                 item("Close Folder", null, this::closeProject, project.isNull()),
                 new SeparatorMenuItem(),
-                item("New Class...", "Shortcut+N", this::newClass, project.isNull()),
                 item("Save", "Shortcut+S", editors::saveActive, editors.noFileOpen()),
                 item("Save All", "Shortcut+Shift+S", editors::saveAll, editors.noFileOpen()),
                 item("Close Tab", "Shortcut+W", editors::closeActive, editors.noFileOpen()),
                 new SeparatorMenuItem(),
                 item("Exit", null, this::exit, null));
+        Menu edit = new Menu("Edit", null,
+                item("Undo", "Shortcut+Z", () -> onFocusedText(GenericStyledArea::undo, TextInputControl::undo), null),
+                item("Redo", "Shortcut+Y", () -> onFocusedText(GenericStyledArea::redo, TextInputControl::redo), null),
+                new SeparatorMenuItem(),
+                item("Cut", "Shortcut+X", () -> onFocusedText(GenericStyledArea::cut, TextInputControl::cut), null),
+                item("Copy", "Shortcut+C", () -> onFocusedText(GenericStyledArea::copy, TextInputControl::copy), null),
+                item("Paste", "Shortcut+V", () -> onFocusedText(GenericStyledArea::paste, TextInputControl::paste), null),
+                new SeparatorMenuItem(),
+                item("Select All", "Shortcut+A",
+                        () -> onFocusedText(GenericStyledArea::selectAll, TextInputControl::selectAll), null));
         CheckMenuItem lightTheme = new CheckMenuItem("Light Theme");
         lightTheme.selectedProperty().bindBidirectional(theme.lightProperty());
         Menu view = new Menu("View", null,
-                item("Show or Hide Navigator", "Shortcut+0", this::toggleSidebar, project.isNull()),
-                item("Files", "Shortcut+1", () -> navigatorTabs.selectToggle(filesTab), project.isNull()),
-                item("Issues", "Shortcut+5", () -> navigatorTabs.selectToggle(issuesTab), project.isNull()),
+                item("Files", "Shortcut+1", () -> showNavigator(filesTab), project.isNull()),
+                item("Issues", "Shortcut+5", () -> showNavigator(issuesTab), project.isNull()),
+                new SeparatorMenuItem(),
+                item("Toggle Sidebar", "Shortcut+B", this::toggleSidebar, project.isNull()),
+                item("Toggle Console", "Shortcut+J", this::toggleConsole, project.isNull()),
                 new SeparatorMenuItem(),
                 lightTheme);
         Menu run = new Menu("Run", null,
                 item("Run", "F5", this::run, cannotRun),
-                item("Build", "Shortcut+B", () -> startBuild(null, false), cannotRun),
+                item("Build", "Shortcut+F9", () -> startBuild(null, false), cannotRun),
                 item("Stop", "Shift+F5", runner::stop, running.not()),
                 new SeparatorMenuItem(),
                 item("Clear Console", null, console::clear, null));
         Menu help = new Menu("Help", null, item("About Liquid-J", null, this::showAbout, null));
-
-        MenuButton menu = new MenuButton(null, Icons.menu(), file, view, run, help);
-        menu.setId("app-menu");
-        menu.getStyleClass().add("app-menu");
-        menu.setTooltip(new Tooltip("Menu"));
-        return menu;
-    }
-
-    private Node navigatorTabStrip() {
-        filesTab.setGraphic(Icons.folderOpen());
-        filesTab.setTooltip(new Tooltip("Files (Ctrl+1)"));
-        filesTab.setId("files-tab");
-        issuesTab.setGraphic(Icons.warning());
-        issuesTab.setTooltip(new Tooltip("Issues (Ctrl+5)"));
-        issuesTab.setId("issues-tab");
-        for (ToggleButton tab : List.of(filesTab, issuesTab)) {
-            tab.setToggleGroup(navigatorTabs);
-            tab.getStyleClass().add("navigator-tab");
-            tab.disableProperty().bind(project.isNull());
-        }
-        navigatorTabs.selectToggle(filesTab);
-        // A navigator is always showing; clicking the selected tab again keeps it selected.
-        navigatorTabs.selectedToggleProperty().addListener((obs, old, now) -> {
-            if (now == null) {
-                navigatorTabs.selectToggle(old);
-            }
-        });
-        HBox strip = new HBox(2, filesTab, issuesTab);
-        strip.getStyleClass().add("navigator-tabs");
-        return strip;
-    }
-
-    private Node navigatorContent() {
-        Node files = tree.node();
-        files.visibleProperty().bind(navigatorTabs.selectedToggleProperty().isEqualTo(filesTab));
-        Node issueList = issueList();
-        issueList.visibleProperty().bind(navigatorTabs.selectedToggleProperty().isEqualTo(issuesTab));
-        return new StackPane(files, issueList);
-    }
-
-    private Node sidebarFooter() {
-        Button add = toolButton(Icons.plus(), "New Class (Ctrl+N)", this::newClass);
-        add.disableProperty().bind(project.isNull());
-        TextField filter = new TextField();
-        filter.setId("file-filter");
-        filter.setPromptText("Filter");
-        filter.getStyleClass().add("filter-field");
-        filter.textProperty().addListener((obs, old, text) -> tree.setFilter(text));
-        filter.disableProperty().bind(project.isNull());
-        project.addListener((obs, old, now) -> filter.clear());
-        HBox.setHgrow(filter, Priority.ALWAYS);
-        HBox footer = new HBox(6, add, filter);
-        footer.getStyleClass().add("sidebar-footer");
-        footer.setAlignment(Pos.CENTER_LEFT);
-        return footer;
-    }
-
-    private ListView<JavaRunner.Diagnostic> issueList() {
-        ListView<JavaRunner.Diagnostic> list = new ListView<>(issues);
-        list.setId("issues");
-        Label placeholder = new Label("No issues");
-        placeholder.getStyleClass().add("empty-state");
-        list.setPlaceholder(placeholder);
-        list.setCellFactory(view -> new ListCell<>() {
-            @Override
-            protected void updateItem(JavaRunner.Diagnostic issue, boolean empty) {
-                super.updateItem(issue, empty);
-                if (empty || issue == null) {
-                    setGraphic(null);
-                    return;
-                }
-                Label message = new Label(issue.message());
-                message.getStyleClass().add("issue-message");
-                message.setWrapText(true);
-                Label where = new Label(issue.file().getFileName() + ":" + issue.line());
-                where.getStyleClass().add("issue-location");
-                HBox row = new HBox(8, issue.error() ? Icons.error() : Icons.warning(), new VBox(1, message, where));
-                setGraphic(row);
-            }
-        });
-        list.setOnMouseClicked(event -> openIssue(list.getSelectionModel().getSelectedItem()));
-        list.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER) {
-                openIssue(list.getSelectionModel().getSelectedItem());
-            }
-        });
-        return list;
-    }
-
-    // ---------- Main column ----------
-
-    private Node mainColumn() {
-        SplitPane editorAndConsole = new SplitPane(editors.node(), consoleArea());
-        editorAndConsole.setOrientation(Orientation.VERTICAL);
-        editorAndConsole.setDividerPositions(0.7);
-        editorAndConsole.getStyleClass().add("editor-split");
-        editorAndConsole.visibleProperty().bind(project.isNotNull());
-
-        StackPane welcomeLayer = new StackPane(welcome.node());
-        welcomeLayer.getStyleClass().add("welcome-layer");
-        welcomeLayer.visibleProperty().bind(project.isNull());
-
-        StackPane body = new StackPane(editorAndConsole, welcomeLayer);
-        VBox.setVgrow(body, Priority.ALWAYS);
-        VBox column = new VBox(mainToolbar(), body, statusLine());
-        column.getStyleClass().add("main-column");
-        return column;
-    }
-
-    private Node mainToolbar() {
-        Button sidebarToggle = toolButton(Icons.sidebar(), "Show or hide the navigator (Ctrl+0)", this::toggleSidebar);
-        sidebarToggle.getStyleClass().add("plain");
-        sidebarToggle.disableProperty().bind(project.isNull());
-        title.getStyleClass().add("window-title");
-
-        Button open = toolButton(Icons.folderOpen(), "Open Folder (Ctrl+O)", this::chooseFolder);
-        Button themeToggle = toolButton(Icons.theme(), "Switch light or dark theme",
-                () -> theme.lightProperty().set(!theme.lightProperty().get()));
-
-        Region left = new Region();
-        Region right = new Region();
-        HBox.setHgrow(left, Priority.ALWAYS);
-        HBox.setHgrow(right, Priority.ALWAYS);
-        HBox bar = new HBox(10, sidebarToggle, title, left, activityView(), right, capsule(open, themeToggle));
-        bar.getStyleClass().add("main-toolbar");
-        bar.setAlignment(Pos.CENTER_LEFT);
-        chrome.makeDragArea(bar);
+        MenuBar bar = new MenuBar(file, edit, view, run, help);
+        bar.setId("menu-bar");
         return bar;
+    }
+
+    /** Edit menu commands go to whichever text field or code area has focus. */
+    private void onFocusedText(Consumer<GenericStyledArea<?, ?, ?>> onArea, Consumer<TextInputControl> onField) {
+        Node focused = stage.getScene().getFocusOwner();
+        if (focused instanceof GenericStyledArea<?, ?, ?> area) {
+            onArea.accept(area);
+        } else if (focused instanceof TextInputControl field) {
+            onField.accept(field);
+        }
     }
 
     /** The centre capsule: project and run target, then what the last build did. */
@@ -362,10 +283,118 @@ public final class LiquidJ extends Application {
 
         StackPane activity = new StackPane(content, progress);
         activity.getStyleClass().add("activity");
-        activity.setMaxWidth(480);
-        activity.setMinWidth(260);
-        HBox.setHgrow(activity, Priority.SOMETIMES);
+        activity.setMaxWidth(440);
+        activity.setMinWidth(240);
+        BorderPane.setAlignment(activity, Pos.CENTER);
         return activity;
+    }
+
+    // ---------- Sidebar ----------
+
+    private Node sidebar() {
+        for (ToggleButton tab : List.of(filesTab, issuesTab)) {
+            tab.setToggleGroup(navigatorTabs);
+            tab.getStyleClass().add("navigator-tab");
+            tab.disableProperty().bind(project.isNull());
+        }
+        filesTab.setId("files-tab");
+        issuesTab.setId("issues-tab");
+        Label issueCount = new Label();
+        issueCount.getStyleClass().add("count-badge");
+        issueCount.textProperty().bind(Bindings.size(issues).asString());
+        issueCount.visibleProperty().bind(Bindings.isNotEmpty(issues));
+        issueCount.managedProperty().bind(issueCount.visibleProperty());
+        issuesTab.setGraphic(issueCount);
+        issuesTab.setContentDisplay(ContentDisplay.RIGHT);
+        navigatorTabs.selectToggle(filesTab);
+        // A navigator is always showing; clicking the selected tab again keeps it selected.
+        navigatorTabs.selectedToggleProperty().addListener((obs, old, now) -> {
+            if (now == null) {
+                navigatorTabs.selectToggle(old);
+            }
+        });
+
+        Button add = toolButton(Icons.plus(), "New Class (Ctrl+N)", this::newClass);
+        add.getStyleClass().add("plain");
+        add.disableProperty().bind(project.isNull());
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox header = new HBox(2, filesTab, issuesTab, spacer, add);
+        header.getStyleClass().add("sidebar-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Node files = tree.node();
+        files.visibleProperty().bind(navigatorTabs.selectedToggleProperty().isEqualTo(filesTab));
+        Node issueList = issueList();
+        issueList.visibleProperty().bind(navigatorTabs.selectedToggleProperty().isEqualTo(issuesTab));
+        StackPane content = new StackPane(files, issueList);
+        VBox.setVgrow(content, Priority.ALWAYS);
+
+        TextField filter = new TextField();
+        filter.setId("file-filter");
+        filter.setPromptText("Filter files");
+        filter.getStyleClass().add("filter-field");
+        filter.textProperty().addListener((obs, old, text) -> tree.setFilter(text));
+        filter.disableProperty().bind(project.isNull());
+        project.addListener((obs, old, now) -> filter.clear());
+        HBox footer = new HBox(filter);
+        HBox.setHgrow(filter, Priority.ALWAYS);
+        footer.getStyleClass().add("sidebar-footer");
+
+        VBox box = new VBox(header, content, footer);
+        box.getStyleClass().add("sidebar");
+        return box;
+    }
+
+    private ListView<JavaRunner.Diagnostic> issueList() {
+        ListView<JavaRunner.Diagnostic> list = new ListView<>(issues);
+        list.setId("issues");
+        Label placeholder = new Label("No issues");
+        placeholder.getStyleClass().add("empty-state");
+        list.setPlaceholder(placeholder);
+        list.setCellFactory(view -> new ListCell<>() {
+            @Override
+            protected void updateItem(JavaRunner.Diagnostic issue, boolean empty) {
+                super.updateItem(issue, empty);
+                if (empty || issue == null) {
+                    setGraphic(null);
+                    return;
+                }
+                Label message = new Label(issue.message());
+                message.getStyleClass().add("issue-message");
+                message.setWrapText(true);
+                Label where = new Label(issue.file().getFileName() + ":" + issue.line());
+                where.getStyleClass().add("issue-location");
+                HBox row = new HBox(8, issue.error() ? Icons.error() : Icons.warning(), new VBox(2, message, where));
+                setGraphic(row);
+            }
+        });
+        list.setOnMouseClicked(event -> openIssue(list.getSelectionModel().getSelectedItem()));
+        list.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                openIssue(list.getSelectionModel().getSelectedItem());
+            }
+        });
+        return list;
+    }
+
+    // ---------- Editor pane ----------
+
+    private Node editorPane() {
+        consoleArea = consoleArea();
+        editorSplit = new SplitPane(editors.node(), consoleArea);
+        editorSplit.setOrientation(Orientation.VERTICAL);
+        editorSplit.setDividerPositions(CONSOLE_DIVIDER);
+        editorSplit.getStyleClass().add("editor-split");
+        editorSplit.visibleProperty().bind(project.isNotNull());
+
+        StackPane welcomeLayer = new StackPane(welcome.node());
+        welcomeLayer.getStyleClass().add("welcome-layer");
+        welcomeLayer.visibleProperty().bind(project.isNull());
+
+        StackPane pane = new StackPane(editorSplit, welcomeLayer);
+        pane.getStyleClass().add("editor-pane");
+        return pane;
     }
 
     private Node consoleArea() {
@@ -376,9 +405,11 @@ public final class LiquidJ extends Application {
         rerun.setOnAction(event -> rerun());
         Button clear = new Button("Clear");
         clear.setOnAction(event -> console.clear());
+        Button hide = toolButton(Icons.windowClose(), "Hide console (Ctrl+J)", this::toggleConsole);
+        hide.getStyleClass().add("plain");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox header = new HBox(4, heading, spacer, rerun, clear);
+        HBox header = new HBox(4, heading, spacer, rerun, clear, hide);
         header.getStyleClass().add("console-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -389,9 +420,17 @@ public final class LiquidJ extends Application {
         return area;
     }
 
-    private Node statusLine() {
+    // ---------- Status bar ----------
+
+    private Node statusBar() {
+        Button sidebarToggle = toolButton(Icons.sidebar(), "Toggle sidebar (Ctrl+B)", this::toggleSidebar);
+        Button consoleToggle = toolButton(Icons.console(), "Toggle console (Ctrl+J)", this::toggleConsole);
         Button errors = issueBadge(Icons.error(), errorCount);
         Button warnings = issueBadge(Icons.warning(), warningCount);
+        for (Button button : List.of(sidebarToggle, consoleToggle)) {
+            button.getStyleClass().add("plain");
+            button.disableProperty().bind(project.isNull());
+        }
         errors.visibleProperty().bind(project.isNotNull());
         warnings.visibleProperty().bind(project.isNotNull());
 
@@ -399,17 +438,18 @@ public final class LiquidJ extends Application {
         caret.textProperty().bind(editors.caretProperty());
         Label lineEnding = new Label();
         lineEnding.textProperty().bind(editors.lineEndingProperty());
-        HBox fileInfo = new HBox(16, caret, new Label("Spaces: 4"), new Label("UTF-8"), lineEnding);
+        HBox fileInfo = new HBox(18, caret, new Label("Spaces: 4"), new Label("UTF-8"), lineEnding, new Label("Java"));
         fileInfo.visibleProperty().bind(editors.noFileOpen().not());
         fileInfo.setAlignment(Pos.CENTER_RIGHT);
-        Label java = new Label("Java " + Runtime.version().feature());
+        Label jdk = new Label("JDK " + Runtime.version().feature());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox line = new HBox(16, errors, warnings, spacer, fileInfo, java);
-        line.setAlignment(Pos.CENTER_LEFT);
-        line.getStyleClass().add("status-line");
-        return line;
+        HBox bar = new HBox(4, sidebarToggle, consoleToggle, errors, warnings, spacer, fileInfo, jdk);
+        HBox.setMargin(jdk, new Insets(0, 0, 0, 18));
+        bar.setAlignment(Pos.CENTER_LEFT);
+        bar.getStyleClass().add("status-bar");
+        return bar;
     }
 
     // ---------- Small builders ----------
@@ -420,13 +460,13 @@ public final class LiquidJ extends Application {
         badge.setGraphic(icon);
         badge.textProperty().bind(count.asString());
         badge.getStyleClass().add("issue-badge");
-        badge.setOnAction(event -> showIssues());
+        badge.setOnAction(event -> showNavigator(issuesTab));
         return badge;
     }
 
-    private static Button windowButton(String kind, String tooltip, Runnable action) {
-        Button button = new Button();
-        button.getStyleClass().addAll("window-button", kind);
+    private static Button captionButton(Node icon, String tooltip, Runnable action) {
+        Button button = new Button(null, icon);
+        button.getStyleClass().add("caption-button");
         button.setTooltip(new Tooltip(tooltip));
         button.setFocusTraversable(false);
         button.setOnAction(event -> action.run());
@@ -436,6 +476,7 @@ public final class LiquidJ extends Application {
     private static HBox capsule(Button... buttons) {
         HBox capsule = new HBox(2, buttons);
         capsule.getStyleClass().add("capsule");
+        capsule.setMaxHeight(Region.USE_PREF_SIZE);
         capsule.setAlignment(Pos.CENTER);
         return capsule;
     }
@@ -465,26 +506,39 @@ public final class LiquidJ extends Application {
                 () -> (int) issues.stream().filter(issue -> issue.error() == errors).count(), issues);
     }
 
-    /** Collapses the sidebar to its top row (window and run controls), or opens it again. */
+    // ---------- Panels ----------
+
     private void toggleSidebar() {
-        boolean open = sidebarBody.isVisible();
-        sidebarBody.setVisible(!open);
-        sidebarBody.setManaged(!open);
-        if (open) {
+        if (split.getItems().contains(sidebar)) {
             sidebarDivider = split.getDividerPositions()[0];
-            Node sidebar = split.getItems().get(0);
-            double collapsed = sidebar.minWidth(-1) / split.getWidth();
-            split.setDividerPositions(collapsed);
+            split.getItems().remove(sidebar);
         } else {
+            split.getItems().add(0, sidebar);
             split.setDividerPositions(sidebarDivider);
         }
     }
 
-    private void showIssues() {
-        if (!sidebarBody.isVisible()) {
+    private void toggleConsole() {
+        if (editorSplit.getItems().contains(consoleArea)) {
+            consoleDivider = editorSplit.getDividerPositions()[0];
+            editorSplit.getItems().remove(consoleArea);
+        } else {
+            showConsole();
+        }
+    }
+
+    private void showConsole() {
+        if (!editorSplit.getItems().contains(consoleArea)) {
+            editorSplit.getItems().add(consoleArea);
+            editorSplit.setDividerPositions(consoleDivider);
+        }
+    }
+
+    private void showNavigator(ToggleButton tab) {
+        if (!split.getItems().contains(sidebar)) {
             toggleSidebar();
         }
-        navigatorTabs.selectToggle(issuesTab);
+        navigatorTabs.selectToggle(tab);
     }
 
     // ---------- Projects ----------
@@ -589,18 +643,16 @@ public final class LiquidJ extends Application {
         }
     }
 
-    /** Window title, toolbar title and the run target in the activity view. */
+    /** Window title (taskbar) and the project and run target in the activity view. */
     private void updateTitle() {
         Path folder = project.get();
         if (folder == null) {
             stage.setTitle("Liquid-J");
-            title.setText("Liquid-J");
             scheme.setText("No project");
             return;
         }
         String name = folder.getFileName().toString();
         stage.setTitle(name + " - Liquid-J");
-        title.setText(name);
         scheme.setText(name + (lastMainClass == null ? "" : "  ›  " + lastMainClass));
     }
 
@@ -663,6 +715,7 @@ public final class LiquidJ extends Application {
         }
         console.clear();
         issues.clear();
+        showConsole();
         running.set(true);
         console.setInputEnabled(mainClass != null);
         updateTitle();
@@ -707,7 +760,7 @@ public final class LiquidJ extends Application {
                 long errors = result.diagnostics().stream().filter(JavaRunner.Diagnostic::error).count();
                 setStatus("Build Failed  ·  " + JavaRunner.plural(errors, "error"), "error");
                 if (!issues.isEmpty()) {
-                    showIssues();
+                    showNavigator(issuesTab);
                 }
             }
             case STOPPED -> {
@@ -789,7 +842,8 @@ public final class LiquidJ extends Application {
     private void showAbout() {
         Alert about = theme.style(new Alert(Alert.AlertType.INFORMATION,
                 "A small Java IDE for CSE 342 (Advanced Programming Lab).\n\n"
-                        + "Java " + Runtime.version() + "\nJavaFX " + System.getProperty("javafx.version")));
+                        + "Java " + Runtime.version() + "\nJavaFX " + System.getProperty("javafx.version")
+                        + "\n\nFonts: Inter and JetBrains Mono, SIL Open Font License 1.1."));
         about.initOwner(stage);
         about.setTitle("About Liquid-J");
         about.setHeaderText("Liquid-J " + VERSION);

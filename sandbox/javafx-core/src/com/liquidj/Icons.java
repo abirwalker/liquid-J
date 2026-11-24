@@ -21,8 +21,24 @@ final class Icons {
         return filled("M2.5,2.5 H11.5 V11.5 H2.5 Z");
     }
 
-    static Node menu() {
-        return stroked("M2,3.5 H12 M2,7 H12 M2,10.5 H12");
+    static Node windowMinimize() {
+        return stroked("M2.5,7 H11.5");
+    }
+
+    static Node windowMaximize() {
+        return stroked("M2.5,2.5 H11.5 V11.5 H2.5 Z");
+    }
+
+    static Node windowRestore() {
+        return stroked("M2.5,4.5 H9.5 V11.5 H2.5 Z M4.5,4.5 V2.5 H11.5 V9.5 H9.5");
+    }
+
+    static Node windowClose() {
+        return stroked("M3,3 L11,11 M11,3 L3,11");
+    }
+
+    static Node console() {
+        return stroked("M1.5,2.5 H12.5 V11.5 H1.5 Z M1.5,8 H12.5");
     }
 
     static Node sidebar() {

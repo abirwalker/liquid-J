@@ -154,8 +154,8 @@ final class EditorTabs {
         Label title = new Label("No file open");
         title.getStyleClass().add("empty-title");
         VBox hints = new VBox(6,
-                hint("Open a file", "Double-click in the navigator"),
-                hint("New Class", "Ctrl+N"),
+                hint("Open a file", "Double-click it in Files"),
+                hint("New Java File", "Ctrl+N"),
                 hint("Run", "F5"));
         hints.setAlignment(Pos.CENTER);
         VBox box = new VBox(14, title, hints);

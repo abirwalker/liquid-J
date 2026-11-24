@@ -101,12 +101,6 @@
     -fx-padding: 0 0 0 12;
 }
 
-.app-name {
-    -fx-font-family: "Geist SemiBold";
-    -fx-text-fill: -lj-text;
-    -fx-padding: 0 6 0 0;
-}
-
 .menu-bar {
     -fx-background-color: transparent;
     -fx-padding: 0;

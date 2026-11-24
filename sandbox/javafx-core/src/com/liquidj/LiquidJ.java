@@ -161,9 +161,7 @@ public final class LiquidJ extends Application {
     // ---------- Title bar ----------
 
     private Node titleBar() {
-        Label appName = new Label("Liquid-J");
-        appName.getStyleClass().add("app-name");
-        HBox left = new HBox(6, appName, menuBar());
+        HBox left = new HBox(menuBar());
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button runButton = toolButton(Icons.play(), "Run (F5)", this::run);
@@ -187,9 +185,9 @@ public final class LiquidJ extends Application {
         HBox captions = new HBox(minimize, maximize, close);
         captions.getStyleClass().add("caption-buttons");
 
-        Button newClass = toolButton(Icons.plus(), "New Class (Ctrl+N)", this::newClass);
-        newClass.disableProperty().bind(project.isNull());
-        HBox right = new HBox(6, capsule(runButton, stop), newClass, themeToggle, captions);
+        Button newFile = toolButton(Icons.plus(), "New Java File (Ctrl+N)", this::newJavaFile);
+        newFile.disableProperty().bind(project.isNull());
+        HBox right = new HBox(6, capsule(runButton, stop), newFile, themeToggle, captions);
         right.setAlignment(Pos.CENTER_RIGHT);
         // Only the caption buttons span the bar's full height; the rest stay their own size.
         right.setFillHeight(false);
@@ -205,7 +203,7 @@ public final class LiquidJ extends Application {
 
     private MenuBar menuBar() {
         Menu file = new Menu("File", null,
-                item("New Class...", "Shortcut+N", this::newClass, project.isNull()),
+                item("New Java File...", "Shortcut+N", this::newJavaFile, project.isNull()),
                 item("Open Folder...", "Shortcut+O", this::chooseFolder, null),
                 item("Close Folder", null, this::closeProject, project.isNull()),
                 new SeparatorMenuItem(),
@@ -314,7 +312,7 @@ public final class LiquidJ extends Application {
             }
         });
 
-        Button add = toolButton(Icons.plus(), "New Class (Ctrl+N)", this::newClass);
+        Button add = toolButton(Icons.plus(), "New Java File (Ctrl+N)", this::newJavaFile);
         add.getStyleClass().add("plain");
         add.disableProperty().bind(project.isNull());
         Region spacer = new Region();
@@ -788,26 +786,27 @@ public final class LiquidJ extends Application {
 
     // ---------- Dialogs ----------
 
-    private void newClass() {
+    private void newJavaFile() {
         Path folder = project.get();
         if (folder == null) {
             return;
         }
         Path sourceRoot = JavaRunner.sourceRoot(folder);
-        String prompt = "Name of the new class (created in " + folder.relativize(sourceRoot) + ")";
+        String where = sourceRoot.equals(folder) ? "the project folder" : folder.relativize(sourceRoot).toString();
+        String prompt = "File name, without .java (saved in " + where + ")";
         TextInputDialog dialog = theme.style(new TextInputDialog());
         dialog.initOwner(stage);
-        dialog.setTitle("New Class");
+        dialog.setTitle("New Java File");
         dialog.setHeaderText(prompt);
         Node okButton = dialog.getDialogPane().lookupButton(ButtonType.OK);
         okButton.setDisable(true);
         dialog.getEditor().textProperty().addListener((obs, old, text) -> {
-            String problem = classNameProblem(text.strip(), sourceRoot);
+            String problem = classNameProblem(baseName(text), sourceRoot);
             okButton.setDisable(problem != null);
             dialog.setHeaderText(problem == null || problem.isEmpty() ? prompt : problem);
         });
 
-        dialog.showAndWait().map(String::strip).ifPresent(name -> {
+        dialog.showAndWait().map(LiquidJ::baseName).ifPresent(name -> {
             Path file = sourceRoot.resolve(name + ".java");
             try {
                 Files.writeString(file, "public class " + name + " {\n\n}\n", StandardCharsets.UTF_8,
@@ -825,13 +824,20 @@ public final class LiquidJ extends Application {
         });
     }
 
+    /** "Shape.java" and "Shape" both name the file Shape.java. */
+    private static String baseName(String typed) {
+        String name = typed.strip();
+        return name.endsWith(".java") ? name.substring(0, name.length() - ".java".length()) : name;
+    }
+
     /** Null when the name is usable, empty when nothing is typed yet, otherwise the reason. */
     private static String classNameProblem(String name, Path sourceRoot) {
         if (name.isEmpty()) {
             return "";
         }
+        // The file holds a public class of the same name, so the name must be a valid class name.
         if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-            return "\"" + name + "\" is not a valid Java class name.";
+            return "\"" + name + "\" can't be used: a Java file name must be a valid class name (letters, digits, _ and $, not starting with a digit).";
         }
         if (Files.exists(sourceRoot.resolve(name + ".java"))) {
             return name + ".java already exists.";

@@ -21,6 +21,10 @@ final class Icons {
         return filled("M2.5,2.5 H11.5 V11.5 H2.5 Z");
     }
 
+    static Node menu() {
+        return stroked("M2,3.5 H12 M2,7 H12 M2,10.5 H12");
+    }
+
     static Node sidebar() {
         return stroked("M1.5,2.5 H12.5 V11.5 H1.5 Z M5,2.5 V11.5");
     }
